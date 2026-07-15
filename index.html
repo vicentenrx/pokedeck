@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#E3350D">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>PokéDeck — Organizador TCG</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/cards.css">
+<link rel="stylesheet" href="css/modals.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="sb-backdrop"></div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-head">
+    <div class="sb-eyebrow">Pokémon TCG</div>
+    <div class="sb-title">PokéDeck</div>
+  </div>
+  <div class="sb-lbl">Meus Decks</div>
+  <div id="deck-list"></div>
+  <button id="btn-new-deck">+ Novo Deck</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- No deck -->
+  <div id="no-deck">
+    <svg class="pkball-svg" viewBox="0 0 72 72" fill="none">
+      <circle cx="36" cy="36" r="34" fill="#1E1E1E" stroke="#363636" stroke-width="2"/>
+      <path d="M2 36 Q2 2 36 2 Q70 2 70 36Z" fill="#E3350D"/>
+      <rect x="2" y="33" width="68" height="6" fill="#0E0E0E"/>
+      <circle cx="36" cy="36" r="10" fill="#0E0E0E" stroke="#363636" stroke-width="2"/>
+      <circle cx="36" cy="36" r="6" fill="#2A2A2A"/>
+    </svg>
+    <h2>Selecione um deck</h2>
+    <p>Crie um novo deck para começar a organizar suas cartas.</p>
+    <button id="btn-first-deck">+ Criar meu primeiro deck</button>
+  </div>
+
+  <!-- Deck view -->
+  <div id="deck-view" class="hidden" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+    <div id="topbar">
+      <button id="mob-menu">☰</button>
+      <div id="dk-head">
+        <div id="dk-head-name">—</div>
+        <div id="dk-head-fmt"></div>
+      </div>
+      <div id="size-warn" class="hidden"></div>
+      <button id="btn-add-card"><span class="add-plus">+</span><span class="add-lbl">Carta</span></button>
+      <button class="tb-btn tb-ghost" id="btn-import">↓ Importar</button>
+      <button class="tb-btn tb-ghost" id="btn-export">↑ Exportar</button>
+      <button class="tb-btn tb-ghost" id="btn-edit-deck">✎</button>
+    </div>
+    <div id="statsbar">
+      <div class="st-chip"><b id="s-own">0</b> tenho</div>
+      <div class="st-sep">·</div>
+      <div class="st-chip"><b id="s-mis">0</b> faltam</div>
+      <div class="st-sep">·</div>
+      <div class="st-chip"><b id="s-tot">0</b> total</div>
+      <div class="prog-wrap">
+        <div class="prog-track"><div class="prog-fill" id="pb" style="width:0%"></div></div>
+        <div class="prog-pct" id="ppct">0%</div>
+      </div>
+    </div>
+    <div id="cloud-banner">
+      <span class="ci">☁</span>
+      <div id="cloud-txt"><b>Sincronização na nuvem</b> — acesse seus decks de qualquer dispositivo</div>
+      <div id="cloud-status" class="cs-off">Configurar →</div>
+    </div>
+    <div id="filterbar">
+      <button class="flt active" data-f="all">Todas</button>
+      <button class="flt" data-f="owned">✓ Tenho</button>
+      <button class="flt" data-f="missing">✗ Falta</button>
+      <input id="search" type="search" placeholder="Buscar carta...">
+      <select id="set-filter" title="Filtrar por coleção">
+        <option value="">Todas as coleções</option>
+      </select>
+      <div id="view-tog">
+        <button class="vt active" id="vt-grid" title="Grade">⊞</button>
+        <button class="vt" id="vt-list" title="Lista">☰</button>
+      </div>
+    </div>
+    <div id="content">
+      <div id="card-grid"></div>
+      <div id="card-list"></div>
+      <div id="empty-st" class="hidden">
+        <div class="ei">🃏</div>
+        <h3>Nenhuma carta aqui</h3>
+        <p>Adicione cartas com o botão <strong>+ Carta</strong> ou importe uma lista do TCG Live.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- MODAL: Deck -->
+<div class="overlay hidden" id="m-deck">
+  <div class="modal">
+    <h2 id="m-deck-ttl">Novo Deck</h2>
+    <p class="sub">Nomeie e escolha formato e cor para identificar seu deck.</p>
+    <div class="mf"><label>Nome do Deck</label><input class="mi" id="d-name" placeholder="Ex: Charizard ex Control" maxlength="48" autocomplete="off"></div>
+    <div class="mi-row">
+      <div class="mf"><label>Formato</label>
+        <select class="mi" id="d-fmt">
+          <option value="Standard">Standard</option>
+          <option value="Expanded">Expanded</option>
+          <option value="Unlimited">Unlimited</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="mf"><label>Cor</label><div class="color-row" id="color-row"></div></div>
+    </div>
+    <div class="m-actions">
+      <button class="tb-btn tb-ghost" id="m-deck-cancel">Cancelar</button>
+      <button class="tb-btn tb-red" id="m-deck-save">Salvar Deck</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Card -->
+<div class="overlay hidden" id="m-card">
+  <div class="modal">
+    <h2>Adicionar Carta</h2>
+    <p class="sub">Busque pelo nome para autocompletar. Se a carta for recente e não aparecer, preencha manualmente.</p>
+    <div class="mf"><label>Buscar na API</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select class="mi" id="api-set-filter" style="max-width:210px">
+          <option value="">Todas as coleções</option>
+        </select>
+      </div>
+      <div class="c-search-wrap">
+        <input class="mi" id="c-search" placeholder="Digite o nome da carta..." autocomplete="off">
+        <div class="c-sugg hidden" id="c-sugg"></div>
+      </div>
+    </div>
+    <div class="mf-divider">ou preencha manualmente</div>
+    <div class="mi-row">
+      <div class="mf"><label>Nome</label><input class="mi" id="c-name" placeholder="Nome exato" maxlength="64" autocomplete="off"></div>
+      <div class="mf narrow"><label>Qtd.</label><input class="mi" id="c-qty" type="number" min="1" max="4" value="1"></div>
+    </div>
+    <div class="mi-row">
+      <div class="mf"><label>Coleção</label><input class="mi" id="c-set" placeholder="Ex: OBF 125" autocomplete="off"></div>
+      <div class="mf"><label>Tipo</label>
+        <select class="mi" id="c-type">
+          <option value="Pokémon">Pokémon</option>
+          <option value="Treinador">Treinador</option>
+          <option value="Energia">Energia</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="c-img">
+    <div class="m-actions">
+      <button class="tb-btn tb-ghost" id="m-card-cancel">Cancelar</button>
+      <button class="tb-btn tb-red" id="m-card-save">Adicionar ao Deck</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Editar Carta -->
+<div class="overlay hidden" id="m-edit-card">
+  <div class="modal">
+    <h2>Editar Carta</h2>
+    <p class="sub">Altere os dados da carta no deck.</p>
+    <input type="hidden" id="ec-id">
+    <div class="mi-row">
+      <div class="mf"><label>Nome</label><input class="mi" id="ec-name" maxlength="64" autocomplete="off"></div>
+      <div class="mf narrow"><label>Qtd. no deck</label><input class="mi" id="ec-qty" type="number" min="1" max="4"></div>
+    </div>
+    <div class="mi-row">
+      <div class="mf"><label>Coleção</label><input class="mi" id="ec-set" autocomplete="off"></div>
+      <div class="mf"><label>Tipo</label>
+        <select class="mi" id="ec-type">
+          <option value="Pokémon">Pokémon</option>
+          <option value="Treinador">Treinador</option>
+          <option value="Energia">Energia</option>
+        </select>
+      </div>
+    </div>
+    <div class="m-actions">
+      <button class="tb-btn tb-ghost" id="m-edit-card-cancel">Cancelar</button>
+      <button class="tb-btn tb-red" id="m-edit-card-save">Salvar</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Import -->
+<div class="overlay hidden" id="m-import">
+  <div class="modal">
+    <h2>Importar Lista</h2>
+    <p class="sub">Cole a lista exportada do Pokémon TCG Live. Imagens são buscadas automaticamente.</p>
+    <div class="imp-hint">
+      <strong>Formato TCG Live:</strong><br>
+      <code>4 Charizard ex OBF 125</code><br>
+      <code>3 Professor's Research SVI 189</code><br>
+      <code>8 Fire Energy SVE 2</code><br><br>
+      Linhas como <code>Pokémon</code>, <code>Trainer</code>, <code>Energy</code> são ignoradas.
+    </div>
+    <div class="mf"><label>Lista do deck</label>
+      <textarea class="mi" id="imp-txt" rows="11" placeholder="Cole aqui a lista exportada do TCG Live..."></textarea>
+    </div>
+    <div class="m-actions">
+      <button class="tb-btn tb-ghost" id="m-import-cancel">Cancelar</button>
+      <button class="tb-btn tb-red" id="m-import-save">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Export -->
+<div class="overlay hidden" id="m-export">
+  <div class="modal">
+    <h2>Exportar Deck</h2>
+    <p class="sub">Formato compatível com Pokémon TCG Live. Copie e cole diretamente no app.</p>
+    <div class="exp-area" id="exp-area"></div>
+    <div class="m-actions">
+      <button class="tb-btn tb-ghost" id="m-export-cancel">Fechar</button>
+      <button class="tb-btn tb-red" id="m-export-copy">📋 Copiar lista</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Login / Nuvem -->
+<div class="overlay hidden" id="m-sb">
+  <div class="modal">
+    <h2>☁ Sincronização na Nuvem</h2>
+    <p class="sub" id="sb-sub">Entre com sua conta para acessar seus decks de qualquer dispositivo.</p>
+
+    <div id="sb-logged-out">
+      <div class="mf"><label>E-mail</label><input class="mi" id="sb-email" type="email" placeholder="voce@email.com" autocomplete="email"></div>
+      <div class="mf"><label>Senha</label><input class="mi" id="sb-password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+      <p class="sb-switch"><span id="sb-switch-txt">Ainda não tem conta?</span> <a href="#" id="sb-switch-link">Criar conta</a></p>
+    </div>
+
+    <div id="sb-logged-in" class="hidden">
+      <div class="sb-account">Conectado como <b id="sb-account-email"></b></div>
+    </div>
+
+    <div class="m-actions">
+      <button class="tb-btn tb-ghost" id="m-sb-cancel">Fechar</button>
+      <button class="tb-btn tb-ghost hidden" id="m-sb-logout">Sair</button>
+      <button class="tb-btn tb-red" id="m-sb-save">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/constants.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api-ptcg.js"></script>
+<script src="js/api-auth.js"></script>
+<script src="js/api-supabase.js"></script>
+<script src="js/deck-logic.js"></script>
+<script src="js/render.js"></script>
+<script src="js/dragdrop.js"></script>
+<script src="js/events.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

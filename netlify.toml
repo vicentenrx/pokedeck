@@ -1,0 +1,27 @@
+[build]
+  publish = "."
+
+# O app não usa bundler, então os arquivos JS/CSS não têm hash no nome.
+# Sem isso, o navegador (principalmente no celular) pode continuar usando uma
+# versão antiga em cache depois de um novo deploy. "no-cache" não desativa o
+# cache — só obriga o navegador a revalidar com o servidor antes de reusá-lo.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

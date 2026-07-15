@@ -1,0 +1,23 @@
+/* ── Reset & Tokens ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+:root {
+  --red:#E3350D; --red-dark:#B82A0A; --red-light:rgba(227,53,13,.13); --red-border:rgba(227,53,13,.28);
+  --black:#0E0E0E; --g900:#161616; --g800:#1E1E1E; --g750:#242424; --g700:#2C2C2C;
+  --g600:#383838; --g500:#4E4E4E; --g400:#7A7A7A; --g300:#AAAAAA; --g200:#CCCCCC; --white:#FFF;
+  --owned:#22C55E; --owned-bg:rgba(34,197,94,.08); --owned-bd:rgba(34,197,94,.28);
+  --miss-bg:rgba(227,53,13,.05);
+  --sb-green:#3ECF8E;
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --sidebar:262px; --topbar:58px; --stats:46px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--black);color:var(--white);
+  display:flex;height:100vh;height:100dvh;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit}
+img{display:block;max-width:100%}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--g600);border-radius:3px}
+.hidden{display:none!important}

@@ -1,0 +1,67 @@
+/* ── Toast ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--g700);border:1px solid var(--g600);color:var(--white);font-size:13px;font-weight:600;
+  padding:10px 20px;border-radius:99px;z-index:1000;transition:transform .3s var(--ease-spring);
+  pointer-events:none;white-space:nowrap;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── MODALS ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;
+  justify-content:center;z-index:200;padding:16px;backdrop-filter:blur(6px)}
+.modal{background:var(--g800);border:1px solid var(--g600);border-radius:16px;padding:30px 28px 26px;
+  width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.7);
+  scrollbar-width:thin;scrollbar-color:var(--g600) transparent}
+.modal h2{font-size:20px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px}
+.modal .sub{font-size:12px;color:var(--g400);margin-bottom:24px;line-height:1.55}
+.mf{margin-bottom:20px}
+.mf label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--g400);margin-bottom:7px}
+.mi{width:100%;padding:11px 12px;background:var(--g900);border:1.5px solid var(--g600);border-radius:8px;
+  color:var(--white);font-size:13px;outline:none;transition:border-color .13s;appearance:none}
+.mi:focus{border-color:var(--red)}
+.mi::placeholder{color:var(--g500)}
+textarea.mi{resize:vertical;min-height:80px}
+select.mi{cursor:pointer}
+.mi-row{display:flex;gap:12px}
+.mi-row .mf{flex:1}
+.mi-row .mf.narrow{flex:0 0 88px}
+.mf-divider{display:flex;align-items:center;gap:10px;margin:4px 0 20px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.09em;color:var(--g500)}
+.mf-divider::before,.mf-divider::after{content:'';flex:1;height:1px;background:var(--g700)}
+.color-row{display:flex;gap:7px;flex-wrap:wrap;padding-top:3px}
+.cswatch{width:28px;height:28px;border-radius:50%;border:2.5px solid transparent;transition:all .13s;cursor:pointer}
+.cswatch:hover{transform:scale(1.15)}
+.cswatch.sel{border-color:var(--white);transform:scale(1.2)}
+.m-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+
+/* Card search suggestions */
+.c-search-wrap{position:relative}
+.c-sugg{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--g900);
+  border:1.5px solid var(--g600);border-radius:10px;overflow:hidden;z-index:20;max-height:230px;
+  overflow-y:auto;box-shadow:0 12px 36px rgba(0,0,0,.65)}
+.cs-load{padding:16px;text-align:center;font-size:12px;color:var(--g400)}
+.cs-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;
+  transition:background .1s;border-bottom:1px solid var(--g800)}
+.cs-item:last-child{border-bottom:none}
+.cs-item:hover{background:var(--g800)}
+.cs-th{width:30px;height:42px;border-radius:4px;object-fit:cover;background:var(--g700);flex-shrink:0}
+.cs-info .cs-n{font-size:12px;font-weight:700;color:var(--white)}
+.cs-info .cs-s{font-size:10px;color:var(--g400);margin-top:1px}
+
+/* Import hint */
+.imp-hint{background:var(--g900);border:1px solid var(--g700);border-radius:9px;padding:12px 14px;
+  font-size:11px;color:var(--g400);margin-bottom:14px;line-height:1.75}
+.imp-hint strong{color:var(--g200)}
+.imp-hint code{background:var(--g750);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:11px;color:#7DD3FC}
+
+/* Export area */
+.exp-area{background:var(--g900);border:1.5px solid var(--g700);border-radius:9px;padding:14px;
+  font-family:'Courier New',monospace;font-size:11px;color:var(--g200);line-height:1.75;white-space:pre;
+  overflow-x:auto;max-height:320px;overflow-y:auto;margin-bottom:14px;user-select:all}
+
+/* Login / conta */
+.sb-switch{font-size:12px;color:var(--g400);text-align:center;margin-top:-8px}
+.sb-switch a{color:var(--red);font-weight:700;text-decoration:none;margin-left:4px}
+.sb-switch a:hover{text-decoration:underline}
+.sb-account{background:var(--g900);border:1px solid var(--g700);border-radius:9px;padding:16px;
+  font-size:13px;color:var(--g200);text-align:center}
+.sb-account b{color:var(--sb-green)}
