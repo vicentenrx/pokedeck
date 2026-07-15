@@ -91,6 +91,7 @@ function renderCards() {
   const deck  = activeDeck();
   const grid  = $('card-grid');
   const list  = $('card-list');
+  const listHead = $('card-list-head');
   const empty = $('empty-st');
   if (!deck) return;
   let cards = deck.cards;
@@ -99,13 +100,13 @@ function renderCards() {
   if (curSearch) { const q=curSearch.toLowerCase(); cards=cards.filter(c=>c.name.toLowerCase().includes(q)||(c.set||'').toLowerCase().includes(q)); }
   if (curSet) cards = cards.filter(c => (c.set||'').startsWith(curSet));
   grid.innerHTML = ''; list.innerHTML = '';
-  if (!cards.length) { empty.classList.remove('hidden'); grid.style.display='none'; list.style.display='none'; return; }
+  if (!cards.length) { empty.classList.remove('hidden'); grid.style.display='none'; list.style.display='none'; listHead.style.display='none'; return; }
   empty.classList.add('hidden');
   if (viewMode==='grid') {
-    grid.style.display=''; list.style.display='none';
+    grid.style.display='grid'; list.style.display='none'; listHead.style.display='none';
     cards.forEach(c => grid.appendChild(buildGridCard(c, deck.id)));
   } else {
-    grid.style.display='none'; list.style.display='';
+    grid.style.display='none'; list.style.display='block'; listHead.style.display='grid';
     cards.forEach(c => list.appendChild(buildListCard(c, deck.id)));
   }
 }
@@ -174,22 +175,20 @@ function buildListCard(card, deckId) {
       ${card.img?`<img src="${esc(card.img)}" alt="${esc(card.name)}" loading="lazy">`:`<div class="r-thumb-ph">${TE[card.type]||'🃏'}</div>`}
     </div>
     <div class="r-check">${isOwned?'✓':''}</div>
-    <div class="r-info">
-      <div class="r-name">${esc(card.name)}</div>
-      <div class="r-meta">
-        <span class="type-pill" style="background:${tc}22;color:${tc}">${esc(card.type)}</span>
-        <span class="r-set">${esc(card.set||'')}</span>
-      </div>
-    </div>
+    <div class="r-name" title="${esc(card.name)}">${esc(card.name)}</div>
+    <div class="r-set" title="${esc(card.set||'')}">${esc(card.set||'')}</div>
+    <span class="type-pill" style="background:${tc}22;color:${tc}">${esc(card.type)}</span>
     <div class="r-qty">
       <button class="rq-btn" data-d="-1">−</button>
       <span class="rq-num ${ownedClass(card.owned,card.qty)}">${card.owned}/${card.qty}</span>
       <button class="rq-btn" data-d="1">+</button>
     </div>
-    <button class="r-edit" title="Editar">✎</button>
-    <button class="r-del" title="Excluir">✕</button>`;
+    <div class="r-acts">
+      <button class="r-edit" title="Editar">✎</button>
+      <button class="r-del" title="Excluir">✕</button>
+    </div>`;
   el.addEventListener('click', e => {
-    if (e.target.closest('.rq-btn')||e.target.closest('.r-del')) return;
+    if (e.target.closest('.rq-btn')||e.target.closest('.r-acts')) return;
     toggleOwned(deckId, card.id); renderAll();
   });
   el.querySelectorAll('.rq-btn').forEach(b => b.addEventListener('click', e => {
