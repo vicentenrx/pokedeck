@@ -5,8 +5,6 @@ function showAuthGate() {
   switchAgTab('signin');
   $('ag-in-email').value = ''; $('ag-in-password').value = '';
   $('ag-up-email').value = ''; $('ag-up-password').value = ''; $('ag-up-password2').value = '';
-  $('ag-form-signup').classList.remove('hidden');
-  $('ag-verify').classList.add('hidden');
   $('auth-gate').classList.remove('hidden');
 }
 function hideAuthGate() {

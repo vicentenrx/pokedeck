@@ -22,7 +22,11 @@ function sessionFromAuthResponse(data) {
 }
 
 async function signUp(email, password) {
-  const data = await authRequest('/signup', { email, password });
+  // Sem isso, o Supabase usa a "Site URL" configurada no painel como destino
+  // do link de confirmação — se estiver desatualizada (ex: localhost), o link
+  // do e-mail leva pra um endereço morto. Aponta sempre pro endereço atual.
+  const redirectTo = encodeURIComponent(location.origin + location.pathname);
+  const data = await authRequest(`/signup?redirect_to=${redirectTo}`, { email, password });
   if (!data.access_token) return { needsConfirmation: true };
   saveSession(sessionFromAuthResponse(data));
   return { needsConfirmation: false };
