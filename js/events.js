@@ -257,69 +257,14 @@ $('set-filter').addEventListener('change', e => { curSet=e.target.value; renderC
 $('vt-grid').addEventListener('click', () => { viewMode='grid'; $('vt-grid').classList.add('active'); $('vt-list').classList.remove('active'); renderCards(); });
 $('vt-list').addEventListener('click', () => { viewMode='list'; $('vt-list').classList.add('active'); $('vt-grid').classList.remove('active'); renderCards(); });
 
-// Login / conta na nuvem
-let authMode = 'signin'; // ou 'signup'
-
-function renderAuthModal() {
-  const loggedIn = !!session;
-  $('sb-logged-out').classList.toggle('hidden', loggedIn);
-  $('sb-logged-in').classList.toggle('hidden', !loggedIn);
-  $('m-sb-logout').classList.toggle('hidden', !loggedIn);
-  $('m-sb-save').classList.toggle('hidden', loggedIn);
-  if (loggedIn) {
-    $('sb-account-email').textContent = session.user.email;
-    $('sb-sub').textContent = 'Seus decks estão sincronizados nesta conta.';
-  } else {
-    $('sb-sub').textContent = 'Entre com sua conta para acessar seus decks de qualquer dispositivo.';
-    $('m-sb-save').textContent   = authMode==='signin' ? 'Entrar' : 'Criar Conta';
-    $('sb-switch-txt').textContent  = authMode==='signin' ? 'Ainda não tem conta?' : 'Já tem conta?';
-    $('sb-switch-link').textContent = authMode==='signin' ? 'Criar conta' : 'Entrar';
-  }
-}
-
-$('cloud-banner').addEventListener('click', () => {
-  $('sb-email').value = ''; $('sb-password').value = '';
-  authMode = 'signin';
-  renderAuthModal();
-  openModal('m-sb');
-});
-$('m-sb-cancel').addEventListener('click', () => closeModal('m-sb'));
-$('sb-switch-link').addEventListener('click', e => {
-  e.preventDefault();
-  authMode = authMode==='signin' ? 'signup' : 'signin';
-  renderAuthModal();
-});
-$('m-sb-logout').addEventListener('click', async () => {
+// Logout (sidebar)
+$('sb-logout-btn').addEventListener('click', async () => {
   await signOut();
-  updateCloudStatus(); closeModal('m-sb'); toast('Você saiu da conta.');
-});
-$('m-sb-save').addEventListener('click', async () => {
-  const email    = $('sb-email').value.trim();
-  const password = $('sb-password').value;
-  if (!email || !password) { toast('Preencha e-mail e senha.'); return; }
-  try {
-    if (authMode==='signin') {
-      await signIn(email, password);
-      updateCloudStatus(); toast('Conectando...');
-      const ok = await loadSb();
-      closeModal('m-sb');
-      if (ok) { renderAll(); toast('✓ Dados carregados da nuvem!'); }
-      else    { await syncSb(); toast('✓ Conectado! Dados enviados para a nuvem.'); }
-    } else {
-      const r = await signUp(email, password);
-      if (r.needsConfirmation) {
-        closeModal('m-sb');
-        toast('Verifique seu e-mail para confirmar a conta.', 4000);
-        return;
-      }
-      updateCloudStatus(); closeModal('m-sb');
-      await syncSb();
-      toast('✓ Conta criada e conectada!');
-    }
-  } catch (e) { toast(e.message || 'Erro ao autenticar.'); }
+  showAuthGate();
+  toast('Você saiu da conta.');
 });
 
 // ESC
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') ['m-deck','m-card','m-import','m-export','m-sb'].forEach(closeModal);
+  if (e.key==='Escape') ['m-deck','m-card','m-import','m-export'].forEach(closeModal);
 });

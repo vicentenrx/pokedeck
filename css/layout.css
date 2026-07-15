@@ -84,18 +84,13 @@
 .prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--owned),#16a34a);transition:width .5s var(--ease-out)}
 .prog-pct{font-size:12px;font-weight:800;color:var(--owned);min-width:36px;text-align:right}
 
-/* ── Cloud banner ── */
-#cloud-banner{display:flex;align-items:center;gap:10px;padding:8px 16px;
-  background:linear-gradient(90deg,rgba(62,207,142,.07),transparent);
-  border-bottom:1px solid rgba(62,207,142,.12);font-size:12px;color:var(--g300);cursor:pointer;
-  transition:background .15s;flex-shrink:0}
-#cloud-banner:hover{background:linear-gradient(90deg,rgba(62,207,142,.13),transparent)}
-#cloud-banner .ci{font-size:15px;flex-shrink:0}
-#cloud-txt{flex:1}
-#cloud-txt b{color:var(--sb-green)}
-#cloud-status{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0}
-.cs-on{background:rgba(62,207,142,.14);color:var(--sb-green)}
-.cs-off{background:var(--g700);color:var(--g400)}
+/* ── Sidebar account ── */
+#sb-account{display:flex;align-items:center;gap:8px;padding:10px 14px;margin:0 8px;
+  border-top:1px solid var(--g700);flex-shrink:0}
+#sb-account-email{flex:1;font-size:11px;color:var(--g400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sb-logout-btn{background:none;border:none;color:var(--g500);font-size:14px;padding:4px 6px;border-radius:6px;
+  transition:color .12s,background .12s;flex-shrink:0}
+#sb-logout-btn:hover{color:var(--red);background:var(--red-light)}
 
 /* ── Filters ── */
 #filterbar{display:flex;align-items:center;gap:8px;padding:12px 16px 8px;flex-shrink:0;flex-wrap:wrap}

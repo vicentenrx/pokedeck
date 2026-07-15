@@ -43,6 +43,10 @@ async function signOut() {
     } catch {}
   }
   saveSession(null);
+  // Limpa os decks locais também — o dispositivo pode ser compartilhado e o
+  // próximo login (de outra conta) não deve herdar dados de quem saiu.
+  state = { decks: [], activeId: null };
+  saveLocal();
 }
 
 async function refreshSessionIfNeeded() {

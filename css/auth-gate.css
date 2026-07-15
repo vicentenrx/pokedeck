@@ -1,0 +1,58 @@
+/* ── Auth Gate (login / cadastro antes do app) ── */
+#auth-gate{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  background:var(--black);overflow-y:auto;padding:24px}
+
+.ag-glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(560px circle at 50% 32%, rgba(227,53,13,.16), transparent 68%)}
+
+.ag-card{position:relative;width:100%;max-width:400px;background:var(--g800);border:1px solid var(--g700);
+  border-radius:20px;padding:32px 28px;box-shadow:0 32px 80px rgba(0,0,0,.6);
+  animation:agCardIn .45s var(--ease-out)}
+@keyframes agCardIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+
+.ag-brand{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:26px}
+.ag-ball{width:56px;height:56px;margin-bottom:12px}
+.ag-eyebrow{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--g400);margin-bottom:2px}
+.ag-title{font-size:26px;font-weight:900;letter-spacing:-.03em}
+
+.ag-tabs{display:flex;gap:3px;padding:3px;background:var(--g900);border:1px solid var(--g700);
+  border-radius:11px;margin-bottom:22px}
+.ag-tab{flex:1;padding:9px 0;border:none;background:transparent;border-radius:8px;color:var(--g400);
+  font-size:12px;font-weight:800;letter-spacing:.02em;transition:background .18s,color .18s;text-transform:uppercase}
+.ag-tab.active{background:var(--red);color:#fff;box-shadow:0 2px 10px rgba(227,53,13,.35)}
+.ag-tab:not(.active):hover{color:var(--white)}
+
+.ag-form{display:flex;flex-direction:column;animation:agFadeIn .25s var(--ease-out)}
+.ag-form.hidden{display:none}
+@keyframes agFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.ag-error{font-size:12px;color:#FCA5A5;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.28);
+  border-radius:8px;padding:9px 12px;margin:-4px 0 14px;line-height:1.5}
+.ag-error.hidden{display:none}
+
+.ag-form.ag-shake{animation:agShake .38s}
+@keyframes agShake{
+  10%,90%{transform:translateX(-1px)} 20%,80%{transform:translateX(2px)}
+  30%,50%,70%{transform:translateX(-4px)} 40%,60%{transform:translateX(4px)}
+}
+
+.ag-submit{width:100%;padding:13px;background:var(--red);border:none;border-radius:10px;color:#fff;
+  font-size:13px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;
+  box-shadow:0 4px 18px rgba(227,53,13,.32);transition:background .15s,box-shadow .15s,transform .1s}
+.ag-submit:hover:not(:disabled){background:var(--red-dark);box-shadow:0 6px 22px rgba(227,53,13,.42);transform:translateY(-1px)}
+.ag-submit:active:not(:disabled){transform:translateY(0) scale(.97)}
+.ag-submit:disabled{opacity:.65;cursor:default}
+
+.ag-verify{display:flex;flex-direction:column;align-items:center;text-align:center;animation:agFadeIn .3s var(--ease-out)}
+.ag-verify.hidden{display:none}
+.ag-verify-icon{font-size:40px;margin-bottom:14px}
+.ag-verify h3{font-size:17px;font-weight:900;margin-bottom:8px}
+.ag-verify p{font-size:13px;color:var(--g300);line-height:1.6;margin-bottom:20px}
+.ag-verify p b{color:var(--white)}
+.ag-link-btn{background:none;border:none;color:var(--red);font-size:12px;font-weight:700}
+.ag-link-btn:hover{text-decoration:underline}
+
+@media(max-width:420px){
+  .ag-card{padding:26px 20px;border-radius:16px}
+  .ag-title{font-size:22px}
+}

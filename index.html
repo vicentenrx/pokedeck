@@ -10,9 +10,57 @@
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/cards.css">
 <link rel="stylesheet" href="css/modals.css">
+<link rel="stylesheet" href="css/auth-gate.css">
 <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
+
+<!-- AUTH GATE -->
+<div id="auth-gate">
+  <div class="ag-glow"></div>
+  <div class="ag-card">
+    <div class="ag-brand">
+      <svg class="ag-ball" viewBox="0 0 72 72" fill="none">
+        <circle cx="36" cy="36" r="34" fill="#1E1E1E" stroke="#363636" stroke-width="2"/>
+        <path d="M2 36 Q2 2 36 2 Q70 2 70 36Z" fill="#E3350D"/>
+        <rect x="2" y="33" width="68" height="6" fill="#0E0E0E"/>
+        <circle cx="36" cy="36" r="10" fill="#0E0E0E" stroke="#363636" stroke-width="2"/>
+        <circle cx="36" cy="36" r="6" fill="#2A2A2A"/>
+      </svg>
+      <div class="ag-eyebrow">Pokémon TCG</div>
+      <div class="ag-title">PokéDeck</div>
+    </div>
+
+    <div class="ag-tabs">
+      <button class="ag-tab active" id="ag-tab-signin" type="button">Entrar</button>
+      <button class="ag-tab" id="ag-tab-signup" type="button">Criar Conta</button>
+    </div>
+
+    <div class="ag-panels">
+      <form class="ag-form" id="ag-form-signin" novalidate>
+        <div class="mf"><label>E-mail</label><input class="mi" id="ag-in-email" type="email" placeholder="voce@email.com" autocomplete="email"></div>
+        <div class="mf"><label>Senha</label><input class="mi" id="ag-in-password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+        <div class="ag-error hidden" id="ag-in-error"></div>
+        <button type="submit" class="ag-submit" id="ag-in-submit">Entrar</button>
+      </form>
+
+      <form class="ag-form hidden" id="ag-form-signup" novalidate>
+        <div class="mf"><label>E-mail</label><input class="mi" id="ag-up-email" type="email" placeholder="voce@email.com" autocomplete="email"></div>
+        <div class="mf"><label>Senha</label><input class="mi" id="ag-up-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+        <div class="mf"><label>Confirmar Senha</label><input class="mi" id="ag-up-password2" type="password" placeholder="Repita a senha" autocomplete="new-password"></div>
+        <div class="ag-error hidden" id="ag-up-error"></div>
+        <button type="submit" class="ag-submit" id="ag-up-submit">Criar Conta</button>
+      </form>
+
+      <div class="ag-verify hidden" id="ag-verify">
+        <div class="ag-verify-icon">✉️</div>
+        <h3>Verifique seu e-mail</h3>
+        <p>Enviamos um link de confirmação para <b id="ag-verify-email"></b>. Clique nele para ativar sua conta e depois volte aqui para entrar.</p>
+        <button class="ag-link-btn" id="ag-back-to-login" type="button">← Voltar para o login</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="sb-backdrop"></div>
 
@@ -24,6 +72,10 @@
   </div>
   <div class="sb-lbl">Meus Decks</div>
   <div id="deck-list"></div>
+  <div id="sb-account">
+    <span id="sb-account-email"></span>
+    <button id="sb-logout-btn" title="Sair">⏻</button>
+  </div>
   <button id="btn-new-deck">+ Novo Deck</button>
 </div>
 
@@ -67,11 +119,6 @@
         <div class="prog-track"><div class="prog-fill" id="pb" style="width:0%"></div></div>
         <div class="prog-pct" id="ppct">0%</div>
       </div>
-    </div>
-    <div id="cloud-banner">
-      <span class="ci">☁</span>
-      <div id="cloud-txt"><b>Sincronização na nuvem</b> — acesse seus decks de qualquer dispositivo</div>
-      <div id="cloud-status" class="cs-off">Configurar →</div>
     </div>
     <div id="filterbar">
       <button class="flt active" data-f="all">Todas</button>
@@ -223,30 +270,6 @@
   </div>
 </div>
 
-<!-- MODAL: Login / Nuvem -->
-<div class="overlay hidden" id="m-sb">
-  <div class="modal">
-    <h2>☁ Sincronização na Nuvem</h2>
-    <p class="sub" id="sb-sub">Entre com sua conta para acessar seus decks de qualquer dispositivo.</p>
-
-    <div id="sb-logged-out">
-      <div class="mf"><label>E-mail</label><input class="mi" id="sb-email" type="email" placeholder="voce@email.com" autocomplete="email"></div>
-      <div class="mf"><label>Senha</label><input class="mi" id="sb-password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
-      <p class="sb-switch"><span id="sb-switch-txt">Ainda não tem conta?</span> <a href="#" id="sb-switch-link">Criar conta</a></p>
-    </div>
-
-    <div id="sb-logged-in" class="hidden">
-      <div class="sb-account">Conectado como <b id="sb-account-email"></b></div>
-    </div>
-
-    <div class="m-actions">
-      <button class="tb-btn tb-ghost" id="m-sb-cancel">Fechar</button>
-      <button class="tb-btn tb-ghost hidden" id="m-sb-logout">Sair</button>
-      <button class="tb-btn tb-red" id="m-sb-save">Entrar</button>
-    </div>
-  </div>
-</div>
-
 <script src="js/constants.js"></script>
 <script src="js/state.js"></script>
 <script src="js/utils.js"></script>
@@ -257,6 +280,7 @@
 <script src="js/render.js"></script>
 <script src="js/dragdrop.js"></script>
 <script src="js/events.js"></script>
+<script src="js/auth-gate.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

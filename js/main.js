@@ -1,13 +1,10 @@
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-async function init() {
-  loadLocal();
+async function enterApp() {
+  hideAuthGate();
 
-  // Se já está logado, puxa o que tiver na nuvem antes de decidir se semeia o deck demo
-  if (session) await loadSb();
-
-  // Demo deck se vazio
+  // Demo deck se for a primeira vez dessa conta
   if (!state.decks.length) {
     const id = uid();
     state.decks = [{ id, name:'Charizard ex', format:'Standard', color:'#E3350D', cards:[
@@ -31,9 +28,19 @@ async function init() {
     save();
   }
 
-  updateCloudStatus();
+  renderAccountBar();
   loadSetsMap();
   renderAll();
+}
+
+async function init() {
+  loadLocal();
+  if (session) {
+    await loadSb();
+    await enterApp();
+  } else {
+    showAuthGate();
+  }
 }
 
 init();

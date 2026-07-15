@@ -33,8 +33,7 @@ async function loadSb() {
   return false;
 }
 
-function updateCloudStatus() {
-  const el = $('cloud-status');
-  if (session) { el.textContent = '✓ ' + session.user.email; el.className = 'cs-on'; }
-  else         { el.textContent = 'Entrar →';                el.className = 'cs-off'; }
+function renderAccountBar() {
+  if (!session) return;
+  $('sb-account-email').textContent = session.user.email;
 }
