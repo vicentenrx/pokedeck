@@ -35,6 +35,14 @@ async function enterApp() {
 
 async function init() {
   loadLocal();
+  // Não confia cegamente em qualquer objeto salvo em "session" — só entra
+  // direto se ele tiver o formato esperado E a sessão ainda for válida
+  // (refreshSessionIfNeeded zera "session" se o token não puder ser renovado).
+  if (session?.access_token && session?.user?.id) {
+    await refreshSessionIfNeeded();
+  } else {
+    session = null;
+  }
   if (session) {
     await loadSb();
     await enterApp();

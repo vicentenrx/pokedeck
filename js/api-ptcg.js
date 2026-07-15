@@ -1,8 +1,15 @@
 // ═══════════════════════════════════════════════════════════════
 // PTCG API
 // ═══════════════════════════════════════════════════════════════
-function ptcgFetch(url) {
-  return fetch(url, { headers: { 'X-Api-Key': PTCG_KEY } });
+// A API do Pokémon TCG às vezes trava por dezenas de segundos (ou nunca
+// responde). Sem um limite de tempo, a tela fica "carregando" pra sempre —
+// por isso todo fetch aqui tem um timeout curto e falha de forma graciosa
+// (os catches de cada função tratam isso como "sem resultado").
+function ptcgFetch(url, timeoutMs=7000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { headers: { 'X-Api-Key': PTCG_KEY }, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
 }
 
 async function apiSearch(q, limit=20, setCode='') {
@@ -10,7 +17,7 @@ async function apiSearch(q, limit=20, setCode='') {
   try {
     let query = `name:"${q.trim()}"`;
     if (setCode) query += ` set.ptcgoCode:${setCode}`;
-    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(query)}&pageSize=${limit}&select=id,name,images,set,number,supertype`);
+    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(query)}&pageSize=${limit}`);
     const d = await res.json();
     return d.data || [];
   } catch { return []; }
@@ -26,7 +33,7 @@ async function fetchImg(name, setCode='') {
       const num = parts[parts.length-1];
       if (/^\w+$/.test(num)) q += ` number:${num}`;
     }
-    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(q)}&pageSize=1&select=images`);
+    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(q)}&pageSize=1`);
     const d = await res.json();
     const url = d.data?.[0]?.images?.small || '';
     imgCache[key] = url;
@@ -37,12 +44,12 @@ async function fetchImg(name, setCode='') {
 async function loadSetsMap() {
   if (Object.keys(setsMap).length > 0) return; // já carregou
   try {
-    const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250`);
+    const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250`, 10000);
     const d   = await res.json();
     (d.data || []).forEach(s => {
       if (s.ptcgoCode) setsMap[s.ptcgoCode] = s.name;
     });
-  } catch { /* sem internet: fica com código só */ }
+  } catch { /* API lenta/fora do ar: fica com código só */ }
 }
 
 function apiType(supertype) {

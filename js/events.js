@@ -128,7 +128,7 @@ $('btn-add-card').addEventListener('click', async () => {
   const sel = $('api-set-filter');
   if (sel.options.length <= 1) {
     try {
-      const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250&orderBy=-releaseDate`);
+      const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250&orderBy=-releaseDate`, 10000);
       const d   = await res.json();
       (d.data || []).forEach(s => {
         if (!s.ptcgoCode) return;
