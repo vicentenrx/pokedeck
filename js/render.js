@@ -53,7 +53,6 @@ function renderSidebar() {
       save();
       renderAll();
       closeSidebar();
-
     });
     el.querySelector('.dk-del').addEventListener('click', e => {
       e.stopPropagation();

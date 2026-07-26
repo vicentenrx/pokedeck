@@ -31,11 +31,11 @@ function parseDeckList(text) {
     if (!line || /^(Pokémon|Pokemon|Trainer|Energy|Treinador|Energia|##|\/\/)/.test(line)) return acc;
     const m = line.match(/^(\d+)\s+(.+?)(?:\s+([A-Z]{2,6})\s+([\w-]+))?$/);
     if (!m) return acc;
-    const type = guessType(m[2].trim());
-    const qty  = Math.max(1, Math.min(type === 'Energia' ? 60 : 4, parseInt(m[1],10)));
     const name = m[2].trim();
+    const type = guessType(name);
+    const qty  = Math.max(1, Math.min(type === 'Energia' ? 60 : 4, parseInt(m[1],10)));
     const set  = m[3] && m[4] ? `${m[3]} ${m[4]}` : '';
-    acc.push({ name, set, qty, type: guessType(name) });
+    acc.push({ name, set, qty, type });
     return acc;
   }, []);
 }

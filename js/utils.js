@@ -3,7 +3,10 @@
 // ═══════════════════════════════════════════════════════════════
 const $   = id => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-const esc = s  => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// Escapa também aspas — todo uso de esc() no app cai dentro de atributos
+// HTML entre aspas duplas (src="...", title="...", alt="..."), e sem isso um
+// nome de carta como `foo" onmouseover="...` escaparia do atributo.
+const esc = s  => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 let _toastTmr;
 function toast(msg, dur=2400) {
