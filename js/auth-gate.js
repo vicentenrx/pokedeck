@@ -39,6 +39,7 @@ function friendlyAuthError(msg) {
   if (/email not confirmed/i.test(msg))                         return 'Confirme seu e-mail antes de entrar — veja sua caixa de entrada.';
   if (/already registered|already been registered/i.test(msg))  return 'Esse e-mail já tem uma conta. Tente entrar.';
   if (/password.*(least|characters)/i.test(msg))                return 'A senha precisa ter pelo menos 6 caracteres.';
+  if (/error sending confirmation email/i.test(msg))            return 'Não conseguimos enviar o e-mail de confirmação agora (problema no servidor de e-mail). Tente de novo em alguns minutos.';
   return msg || 'Algo deu errado. Tente novamente.';
 }
 
