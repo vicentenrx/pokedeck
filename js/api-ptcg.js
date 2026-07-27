@@ -23,7 +23,60 @@ async function apiSearch(q, limit=20, setCode='') {
   } catch { return []; }
 }
 
-async function fetchImg(name, setCode='') {
+// ═══════════════════════════════════════════════════════════════
+// PREÇO E RARIDADE
+// ═══════════════════════════════════════════════════════════════
+// A API tem raridades bem específicas ("Rare Holo VMAX", "Illustration Rare"...).
+// O app só expõe 6 categorias simples pro usuário — isso aqui aproxima uma na outra.
+function mapRarity(apiRarity) {
+  if (!apiRarity) return '';
+  const r = apiRarity.toLowerCase();
+  if (r.includes('ace spec'))  return 'ACE SPEC';
+  if (r.includes('promo'))     return 'Promo';
+  if (r === 'common')          return 'Comum';
+  if (r === 'uncommon')        return 'Incomum';
+  if (r === 'rare')            return 'Rara';
+  return 'Ultra Rara'; // qualquer coisa acima de "Rare" simples (holo, ultra, secreta, ilustração...)
+}
+
+// Cada raridade real vira uma consulta aproximada pra reencontrar uma carta
+// que combine com a categoria escolhida pelo usuário.
+const RARITY_QUERY = {
+  'Comum':      'rarity:Common',
+  'Incomum':    'rarity:Uncommon',
+  'Rara':       'rarity:Rare',
+  'Promo':      'rarity:Promo',
+  'ACE SPEC':   'rarity:"ACE SPEC Rare"',
+  'Ultra Rara': '(rarity:"Rare Holo" OR rarity:"Rare Holo EX" OR rarity:"Rare Holo GX" OR rarity:"Rare Holo V" OR rarity:"Rare Holo VMAX" OR rarity:"Rare Holo VSTAR" OR rarity:"Rare Ultra" OR rarity:"Rare Secret" OR rarity:"Rare Rainbow" OR rarity:"Double Rare" OR rarity:"Hyper Rare" OR rarity:"Illustration Rare" OR rarity:"Special Illustration Rare" OR rarity:"Amazing Rare" OR rarity:"Radiant Rare")',
+};
+
+function extractUsdPrice(card) {
+  const variants = card?.tcgplayer?.prices;
+  if (!variants) return null;
+  const order = ['holofoil','reverseHolofoil','1stEditionHolofoil','normal','1stEdition','unlimitedHolofoil','unlimited'];
+  for (const key of order) if (typeof variants[key]?.market === 'number') return variants[key].market;
+  for (const key in variants) if (typeof variants[key]?.market === 'number') return variants[key].market;
+  return null;
+}
+
+function extractEurPrice(card) {
+  const p = card?.cardmarket?.prices?.averageSellPrice;
+  return typeof p === 'number' && p > 0 ? p : null;
+}
+
+function cardToMeta(card) {
+  if (!card) return { img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null };
+  return {
+    img:       card.images?.small || '',
+    imgLarge:  card.images?.large || '',
+    number:    card.number || '',
+    rarity:    mapRarity(card.rarity),
+    priceUsd:  extractUsdPrice(card),
+    priceEur:  extractEurPrice(card),
+  };
+}
+
+async function fetchCardMeta(name, setCode='') {
   const key = (name+setCode).toLowerCase().trim();
   if (imgCache[key] !== undefined) return imgCache[key];
   try {
@@ -35,10 +88,25 @@ async function fetchImg(name, setCode='') {
     }
     const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(q)}&pageSize=1`);
     const d = await res.json();
-    const url = d.data?.[0]?.images?.small || '';
-    imgCache[key] = url;
-    return url;
-  } catch { imgCache[key]=''; return ''; }
+    const meta = cardToMeta(d.data?.[0]);
+    // Só guarda em cache um resultado de verdade — a API já se mostrou instável
+    // (fora do ar por minutos seguidos); cachear uma falha faria o app nunca
+    // mais tentar de novo pra essa carta na mesma sessão.
+    if (meta.img) imgCache[key] = meta;
+    return meta;
+  } catch { return cardToMeta(null); }
+}
+
+// Busca a carta de mesmo nome que melhor combina com a raridade escolhida —
+// usada quando o usuário edita a raridade no painel de informações.
+async function fetchCardForRarity(name, rarityLabel) {
+  try {
+    const rarityQ = RARITY_QUERY[rarityLabel];
+    const query = rarityQ ? `name:"${name.trim()}" ${rarityQ}` : `name:"${name.trim()}"`;
+    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(query)}&pageSize=1&orderBy=-set.releaseDate`);
+    const d = await res.json();
+    return d.data?.[0] || null;
+  } catch { return null; }
 }
 
 async function loadSetsMap() {

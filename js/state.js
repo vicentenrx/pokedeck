@@ -14,6 +14,7 @@ let editDeckId = null;
 let selColor   = COLORS[0];
 let searchTmr  = null;
 let curSet     = '';
+let pendingCardMeta = null; // metadados (preço/raridade/número) da sugestão de busca clicada
 
 // ═══════════════════════════════════════════════════════════════
 // PERSIST

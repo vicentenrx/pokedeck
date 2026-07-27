@@ -134,8 +134,11 @@ function buildGridCard(card, deckId) {
       ${imgOrPH(card)}
       <div class="c-badge">✓</div>
       ${isPartial?`<div class="c-part">${card.owned}/${card.qty}</div>`:''}
-      <button class="c-edit-btn" title="Editar carta">✎</button>
-      <button class="c-del-btn" title="Excluir carta">✕</button>
+      <div class="c-btn-group-left">
+        <button class="c-icon-btn c-edit-btn" title="Editar carta">✎</button>
+        <button class="c-icon-btn c-info-btn" title="Informações">ℹ</button>
+      </div>
+      <button class="c-icon-btn c-del-btn" title="Excluir carta">✕</button>
     </div>
     <div class="c-foot">
       <div class="c-foot-name" title="${esc(card.name)}">${esc(card.name)}</div>
@@ -161,6 +164,9 @@ function buildGridCard(card, deckId) {
   el.querySelector('.c-edit-btn').addEventListener('click', e => {
     e.stopPropagation(); openEditCard(deckId, card.id);
   });
+  el.querySelector('.c-info-btn').addEventListener('click', e => {
+    e.stopPropagation(); openCardInfo(deckId, card.id);
+  });
   return el;
 }
 
@@ -184,6 +190,7 @@ function buildListCard(card, deckId) {
     </div>
     <div class="r-acts">
       <button class="r-edit" title="Editar">✎</button>
+      <button class="r-info-btn" title="Informações">ℹ</button>
       <button class="r-del" title="Excluir">✕</button>
     </div>`;
   el.addEventListener('click', e => {
@@ -198,6 +205,9 @@ function buildListCard(card, deckId) {
   });
   el.querySelector('.r-edit').addEventListener('click', e => {
     e.stopPropagation(); openEditCard(deckId, card.id);
+  });
+  el.querySelector('.r-info-btn').addEventListener('click', e => {
+    e.stopPropagation(); openCardInfo(deckId, card.id);
   });
   return el;
 }

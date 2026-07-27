@@ -116,6 +116,7 @@ $('m-deck-save').addEventListener('click', () => {
 $('btn-add-card').addEventListener('click', async () => {
   $('c-search').value=''; $('c-name').value=''; $('c-set').value='';
   $('c-qty').value='1'; $('c-type').value='Pokémon'; $('c-img').value='';
+  pendingCardMeta = null;
   hideSugg();
   openModal('m-card');
   setTimeout(() => $('c-search').focus(), 60);
@@ -157,6 +158,7 @@ function hideSugg() {
 
 $('c-search').addEventListener('input', () => {
   clearTimeout(searchTmr);
+  pendingCardMeta = null; // digitar de novo invalida o preço/raridade da sugestão anterior
   const q = $('c-search').value.trim();
   const sugg = $('c-sugg');
   if (q.length < 2) { hideSugg(); return; }
@@ -180,6 +182,7 @@ $('c-search').addEventListener('input', () => {
         $('c-type').value  = apiType(card.supertype||'');
         $('c-img').value   = img;
         $('c-search').value = card.name;
+        pendingCardMeta = cardToMeta(card); // consumido em m-card-save
         hideSugg();
       });
       sugg.appendChild(item);
@@ -193,13 +196,20 @@ $('m-card-save').addEventListener('click', async () => {
   if (!name) { $('c-search').focus(); return; }
   const isEnergy = $('c-type').value === 'Energia';
   const qty  = Math.max(1, Math.min(isEnergy ? 60 : 4, parseInt($('c-qty').value)||1));
-  const card = { id:uid(), name, set:$('c-set').value.trim(), qty, owned:0, type:$('c-type').value, img:$('c-img').value };
+  const card = {
+    id:uid(), name, set:$('c-set').value.trim(), qty, owned:0, type:$('c-type').value, img:$('c-img').value,
+    imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null,
+    priceUpdatedAt: pendingCardMeta ? new Date().toISOString() : null,
+    ...(pendingCardMeta || {}),
+  };
   const deck = activeDeck();
   deck.cards.push(card);
   save(); closeModal('m-card'); renderAll(); toast('Carta adicionada!');
-  if (!card.img) {
-    const url = await fetchImg(card.name, card.set);
-    if (url) { card.img=url; save(); renderAll(); }
+  if (!pendingCardMeta) { // veio de preenchimento manual: tenta achar preço/raridade em segundo plano
+    const meta = await fetchCardMeta(card.name, card.set);
+    Object.assign(card, meta);
+    if (meta.img) card.priceUpdatedAt = new Date().toISOString(); // achou: não precisa tentar de novo depois
+    save(); renderAll();
   }
 });
 
@@ -216,14 +226,19 @@ $('m-import-save').addEventListener('click', async () => {
   const parsed = parseDeckList(text);
   if (!parsed.length) { toast('Nenhuma carta reconhecida. Verifique o formato.'); return; }
   const deck = activeDeck();
-  const newCards = parsed.map(p => ({ id:uid(), ...p, owned:0, img:'' }));
+  const newCards = parsed.map(p => ({
+    id:uid(), ...p, owned:0, img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null, priceUpdatedAt:null,
+  }));
   deck.cards.push(...newCards);
   save(); closeModal('m-import'); renderAll();
-  toast(`${parsed.length} cartas importadas! Buscando imagens...`);
+  toast(`${parsed.length} cartas importadas! Buscando imagens e preços...`);
   let fetched = 0;
   for (const card of newCards) {
-    const url = await fetchImg(card.name, card.set);
-    if (url) { const c=deck.cards.find(x=>x.id===card.id); if(c){c.img=url;fetched++;} }
+    const meta = await fetchCardMeta(card.name, card.set);
+    if (meta.img) {
+      const c = deck.cards.find(x=>x.id===card.id);
+      if (c) { Object.assign(c, meta, { priceUpdatedAt: new Date().toISOString() }); fetched++; }
+    }
     if (fetched%4===0 && fetched>0) { save(); renderAll(); }
   }
   save(); renderAll();
@@ -266,5 +281,5 @@ $('sb-logout-btn').addEventListener('click', async () => {
 
 // ESC
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') ['m-deck','m-card','m-import','m-export'].forEach(closeModal);
+  if (e.key==='Escape') ['m-deck','m-card','m-import','m-export','m-info'].forEach(closeModal);
 });
