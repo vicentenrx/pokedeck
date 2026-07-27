@@ -84,6 +84,37 @@ function renderTopbar() {
   if (v.status==='none') { w.classList.add('hidden'); }
   else { w.classList.remove('hidden'); w.textContent=v.label;
     w.className = { ok:'warn-ok', under:'warn-under', over:'warn-over' }[v.status]; }
+  renderDeckValue(deck);
+}
+
+// Soma o preço de cada carta (convertido pra BRL, ajustado pela condição) vezes
+// a quantidade no deck. Cartas sem preço nenhum são ignoradas na soma, mas
+// contam pro aviso "*" de que o total é parcial.
+async function renderDeckValue(deck) {
+  const chip = $('s-value-chip');
+  const sep  = $('s-value-sep');
+  const el   = $('s-value');
+  if (!deck || !deck.cards.length) { chip.classList.add('hidden'); sep.classList.add('hidden'); return; }
+  chip.classList.remove('hidden'); sep.classList.remove('hidden');
+  let total = 0, missing = 0;
+  for (const c of deck.cards) {
+    let brl = null;
+    if (c.priceUsd != null) {
+      const rate = await getRateToBrl('USD');
+      if (rate) brl = c.priceUsd * rate;
+    }
+    if (brl == null && c.priceEur != null) {
+      const rate = await getRateToBrl('EUR');
+      if (rate) brl = c.priceEur * rate;
+    }
+    if (activeDeck()?.id !== deck.id) return; // usuário trocou de deck durante o cálculo
+    if (brl != null) total += brl * (CONDITION_MULT[c.condition] ?? 1) * c.qty;
+    else missing++;
+  }
+  el.textContent = formatBrl(total) + (missing ? ' *' : '');
+  chip.title = missing
+    ? `Valor estimado — ${missing} carta${missing!==1?'s':''} sem preço disponível não entra${missing!==1?'m':''} na soma`
+    : 'Valor estimado do deck completo, considerando a condição de cada carta';
 }
 
 function renderCards() {

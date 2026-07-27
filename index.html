@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#E3350D">
 <link rel="icon" type="image/png" href="img/favicon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PokéDeck">
 <title>PokéDeck — Organizador TCG</title>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
@@ -116,6 +122,8 @@
       <div class="st-chip"><b id="s-mis">0</b> faltam</div>
       <div class="st-sep">·</div>
       <div class="st-chip"><b id="s-tot">0</b> total</div>
+      <div class="st-sep" id="s-value-sep">·</div>
+      <div class="st-chip" id="s-value-chip" title="Valor estimado do deck completo, considerando a condição de cada carta">💰 <b id="s-value">—</b></div>
       <div class="prog-wrap">
         <div class="prog-track"><div class="prog-fill" id="pb" style="width:0%"></div></div>
         <div class="prog-pct" id="ppct">0%</div>
@@ -152,6 +160,7 @@
         <p>Adicione cartas com o botão <strong>+ Carta</strong> ou importe uma lista do TCG Live.</p>
       </div>
     </div>
+    <button id="btn-add-card-fab" title="Adicionar carta">+</button>
   </div>
 </div>
 
@@ -249,16 +258,15 @@
 <div class="overlay hidden" id="m-import">
   <div class="modal">
     <h2>Importar Lista</h2>
-    <p class="sub">Cole a lista exportada do Pokémon TCG Live. Imagens são buscadas automaticamente.</p>
+    <p class="sub">Cole a lista exportada do Pokémon TCG Live ou baixada do Liga Pokémon. Imagens e preços são buscados automaticamente.</p>
     <div class="imp-hint">
-      <strong>Formato TCG Live:</strong><br>
-      <code>4 Charizard ex OBF 125</code><br>
-      <code>3 Professor's Research SVI 189</code><br>
-      <code>8 Fire Energy SVE 2</code><br><br>
-      Linhas como <code>Pokémon</code>, <code>Trainer</code>, <code>Energy</code> são ignoradas.
+      <strong>Aceita os dois formatos:</strong><br>
+      <code>4 Charizard ex OBF 125</code> <em>(TCG Live)</em><br>
+      <code>4 Applin TWM 017</code> <em>(Liga Pokémon)</em><br><br>
+      Cabeçalhos de seção (<code>Pokémon</code>, <code>Trainers - 20</code>, <code>Total Cards</code> etc.) são ignorados automaticamente.
     </div>
     <div class="mf"><label>Lista do deck</label>
-      <textarea class="mi" id="imp-txt" rows="11" placeholder="Cole aqui a lista exportada do TCG Live..."></textarea>
+      <textarea class="mi" id="imp-txt" rows="11" placeholder="Cole aqui a lista do TCG Live ou do Liga Pokémon..."></textarea>
     </div>
     <div class="m-actions">
       <button class="tb-btn tb-ghost" id="m-import-cancel">Cancelar</button>
@@ -289,10 +297,17 @@
         <div class="mf">
           <label>Condição da carta</label>
           <select class="mi" id="info-condition">
+            <option value="M">M — Nova</option>
             <option value="NM">NM — Praticamente Nova</option>
             <option value="SP">SP — Usada Levemente</option>
+            <option value="MP">MP — Usada Moderadamente</option>
+            <option value="HP">HP — Muito Usada</option>
             <option value="D">D — Danificada</option>
           </select>
+        </div>
+        <div class="mf">
+          <label>Observações</label>
+          <textarea class="mi" id="info-notes" rows="3" placeholder="Ex: comprada na loja X, reservada pra troca..."></textarea>
         </div>
       </div>
     </div>
@@ -306,7 +321,11 @@
 <div class="overlay hidden" id="m-export">
   <div class="modal">
     <h2>Exportar Deck</h2>
-    <p class="sub">Formato compatível com Pokémon TCG Live. Copie e cole diretamente no app.</p>
+    <p class="sub">Escolha o formato e copie — cola direto no TCG Live ou no Liga Pokémon.</p>
+    <div id="exp-format-tog" class="mi-row-tog">
+      <button class="flt active" data-fmt="tcglive">TCG Live</button>
+      <button class="flt" data-fmt="liga">Liga Pokémon</button>
+    </div>
     <div class="exp-area" id="exp-area"></div>
     <div class="m-actions">
       <button class="tb-btn tb-ghost" id="m-export-cancel">Fechar</button>

@@ -53,6 +53,9 @@ select.mi{cursor:pointer}
 .imp-hint strong{color:var(--g200)}
 .imp-hint code{background:var(--g750);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:11px;color:#7DD3FC}
 
+/* Export format toggle */
+.mi-row-tog{display:flex;gap:8px;margin-bottom:14px}
+
 /* Export area */
 .exp-area{background:var(--g900);border:1.5px solid var(--g700);border-radius:9px;padding:14px;
   font-family:'Courier New',monospace;font-size:11px;color:var(--g200);line-height:1.75;white-space:pre;

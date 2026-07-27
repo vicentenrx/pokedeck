@@ -112,7 +112,9 @@ $('m-deck-save').addEventListener('click', () => {
   save(); closeModal('m-deck'); renderAll();
 });
 
-// Add card
+// Add card (FAB mobile reusa o mesmo fluxo do botão da topbar)
+$('btn-add-card-fab').addEventListener('click', () => $('btn-add-card').click());
+
 $('btn-add-card').addEventListener('click', async () => {
   $('c-search').value=''; $('c-name').value=''; $('c-set').value='';
   $('c-qty').value='1'; $('c-type').value='Pokémon'; $('c-img').value='';
@@ -198,7 +200,7 @@ $('m-card-save').addEventListener('click', async () => {
   const qty  = Math.max(1, Math.min(isEnergy ? 60 : 4, parseInt($('c-qty').value)||1));
   const card = {
     id:uid(), name, set:$('c-set').value.trim(), qty, owned:0, type:$('c-type').value, img:$('c-img').value,
-    imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null, condition:'NM',
+    imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null, condition:'NM', notes:'',
     priceUpdatedAt: pendingCardMeta ? new Date().toISOString() : null,
     ...(pendingCardMeta || {}),
   };
@@ -228,7 +230,7 @@ $('m-import-save').addEventListener('click', async () => {
   const deck = activeDeck();
   const newCards = parsed.map(p => ({
     id:uid(), ...p, owned:0, img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null,
-    priceUpdatedAt:null, condition:'NM',
+    priceUpdatedAt:null, condition:'NM', notes:'',
   }));
   deck.cards.push(...newCards);
   save(); closeModal('m-import'); renderAll();
@@ -250,6 +252,8 @@ $('m-import-save').addEventListener('click', async () => {
 $('btn-export').addEventListener('click', () => {
   const deck = activeDeck();
   if (!deck) return;
+  document.querySelectorAll('#exp-format-tog .flt').forEach(b=>b.classList.remove('active'));
+  document.querySelector('#exp-format-tog .flt[data-fmt="tcglive"]').classList.add('active');
   $('exp-area').textContent = exportList(deck);
   openModal('m-export');
 });
@@ -260,11 +264,20 @@ $('m-export-copy').addEventListener('click', async () => {
 });
 
 // Filters
-document.querySelectorAll('.flt').forEach(btn => btn.addEventListener('click', () => {
-  document.querySelectorAll('.flt').forEach(b=>b.classList.remove('active'));
+document.querySelectorAll('#filterbar .flt').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#filterbar .flt').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   curFilter = btn.dataset.f;
   renderCards();
+}));
+
+// Export format toggle
+document.querySelectorAll('#exp-format-tog .flt').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#exp-format-tog .flt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const deck = activeDeck();
+  if (!deck) return;
+  $('exp-area').textContent = btn.dataset.fmt === 'liga' ? exportListLiga(deck) : exportList(deck);
 }));
 $('search').addEventListener('input', e => { curSearch=e.target.value.trim(); renderCards(); });
 $('set-filter').addEventListener('change', e => { curSet=e.target.value; renderCards(); });

@@ -25,11 +25,36 @@ function exportList(deck) {
   return lines.join('\n');
 }
 
+// Mesma lista, no formato que o site Liga Pokémon usa pro próprio download de
+// deck (seções "Pokemons - N" / "Trainers - N" / "Energias - N", cada carta
+// como "QTD Nome CÓDIGO NÚMERO", rodapé com o total).
+function exportListLiga(deck) {
+  const groups = { 'Pokémon':[], 'Treinador':[], 'Energia':[] };
+  deck.cards.forEach(c => { if (groups[c.type]) groups[c.type].push(c); });
+  const labelMap = { 'Pokémon':'Pokemons', 'Treinador':'Trainers', 'Energia':'Energias' };
+  const lines = ['****** Pokemon Trading Card Game Deck List ******', ''];
+  for (const [key, cards] of Object.entries(groups)) {
+    if (!cards.length) continue;
+    const subtotal = cards.reduce((a,c)=>a+c.qty,0);
+    lines.push(`${labelMap[key]} - ${subtotal}`, '');
+    cards.forEach(c => lines.push(`${c.qty} ${c.name}${c.set?' '+c.set:''}`));
+    lines.push('');
+  }
+  const total = deck.cards.reduce((a,c)=>a+c.qty,0);
+  lines.push(`Total Cards - ${total}`, '');
+  lines.push('****** Lista gerada pelo PokéDeck ******');
+  return lines.join('\n');
+}
+
+// Reconhece tanto o formato do Pokémon TCG Live quanto o de download do Liga
+// Pokémon — as linhas de carta são iguais nos dois ("QTD Nome CÓDIGO NÚMERO");
+// só os cabeçalhos de seção mudam ("Pokémon" vs "Pokemons - 20"), e ambos já
+// caem no filtro de cabeçalho abaixo por começarem com o mesmo prefixo.
 function parseDeckList(text) {
   return text.split('\n').reduce((acc, raw) => {
     const line = raw.trim();
-    if (!line || /^(Pokémon|Pokemon|Trainer|Energy|Treinador|Energia|##|\/\/)/.test(line)) return acc;
-    const m = line.match(/^(\d+)\s+(.+?)(?:\s+([A-Z]{2,6})\s+([\w-]+))?$/);
+    if (!line || /^(\*{2,}|Pokémon|Pokemon|Trainer|Energy|Treinador|Energia|Total Cards|##|\/\/)/.test(line)) return acc;
+    const m = line.match(/^(\d+)\s+(.+?)(?:\s+([A-Z0-9]{2,8})\s+([\w-]+))?$/);
     if (!m) return acc;
     const name = m[2].trim();
     const type = guessType(name);

@@ -54,7 +54,7 @@ function extractEurPrice(card) {
 }
 
 function cardToMeta(card) {
-  if (!card) return { img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null };
+  if (!card) return { img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null, type:'' };
   return {
     img:       card.images?.small || '',
     imgLarge:  card.images?.large || '',
@@ -62,6 +62,9 @@ function cardToMeta(card) {
     rarity:    mapRarity(card.rarity),
     priceUsd:  extractUsdPrice(card),
     priceEur:  extractEurPrice(card),
+    // A API sabe com certeza se é Pokémon/Treinador/Energia — mais confiável
+    // que o guessType() por palavra-chave usado ao importar uma lista de texto.
+    type:      apiType(card.supertype),
   };
 }
 
@@ -96,6 +99,7 @@ function applyCardMeta(card, meta) {
   if (meta.rarity)           card.rarity = meta.rarity;
   if (meta.priceUsd != null) card.priceUsd = meta.priceUsd;
   if (meta.priceEur != null) card.priceEur = meta.priceEur;
+  if (meta.type)             card.type = meta.type;
 }
 
 async function loadSetsMap() {

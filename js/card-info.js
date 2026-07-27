@@ -43,6 +43,7 @@ function renderCardInfo(card) {
   $('info-number').textContent = card.number || number || '—';
   $('info-rarity-value').textContent = card.rarity || '—';
   $('info-condition').value = card.condition || 'NM';
+  $('info-notes').value = card.notes || '';
   renderCardInfoPrice(card);
 }
 
@@ -105,4 +106,14 @@ $('info-condition').addEventListener('change', () => {
   card.condition = $('info-condition').value;
   save();
   renderCardInfoPrice(card);
+  renderDeckValue(activeDeck());
+});
+
+let notesSaveTimer = null;
+$('info-notes').addEventListener('input', () => {
+  const card = currentInfoCard();
+  if (!card) return;
+  card.notes = $('info-notes').value;
+  clearTimeout(notesSaveTimer);
+  notesSaveTimer = setTimeout(save, 500); // evita gravar a cada tecla digitada
 });
