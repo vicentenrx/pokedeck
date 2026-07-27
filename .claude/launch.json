@@ -4,8 +4,8 @@
     {
       "name": "pokedeck-static",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "9064"],
-      "port": 9064
+      "runtimeArgs": ["-m", "http.server", "9175"],
+      "port": 9175
     }
   ]
 }

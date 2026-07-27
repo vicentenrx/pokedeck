@@ -14,7 +14,7 @@
   #content{padding:8px 12px 20px}
   #size-warn{display:none}
   #card-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px}
-  .c-row,.c-row-head{grid-template-columns:26px 20px 1fr 104px 64px}
+  .c-row,.c-row-head{grid-template-columns:26px 20px 1fr 96px 96px}
   .c-row .r-set, .c-row-head .lh-set,
   .c-row .type-pill, .c-row-head .lh-type{display:none}
 }
