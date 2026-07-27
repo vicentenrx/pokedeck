@@ -48,14 +48,16 @@ build step — servir a pasta (ou abrir `index.html`) já roda o app inteiro.
 ## Modelo de dados (card)
 
 ```js
-{ id, name, set, qty, owned, type, img, imgLarge, number, rarity, priceUsd, priceEur, priceUpdatedAt, condition }
+{ id, name, set, qty, owned, type, img, imgLarge, number, rarity, priceUsd, priceEur, priceUpdatedAt, condition, notes }
 ```
 
 `set` é sempre "CÓDIGO NÚMERO" combinado (ex: `"OBF 125"`) — várias partes
 do código fazem parse disso de volta (ver `splitSetCode` em `card-info.js`).
-`rarity` é só leitura, vem da API. `condition` (`NM`/`SP`/`D`) é o único
-campo de "qualidade" editável pelo usuário, e só aplica um multiplicador
-local (`CONDITION_MULT`) — nunca dispara busca na rede.
+`rarity` é só leitura, vem da API. `condition` (`M`/`NM`/`SP`/`MP`/`HP`/`D`,
+ver `CONDITION_LABEL`/`CONDITION_MULT` em `constants.js`) é o único campo de
+"qualidade" editável pelo usuário, e só aplica um multiplicador local —
+nunca dispara busca na rede. `notes` é texto livre do usuário (ex: "comprada
+na loja X"); nunca é tocado por `applyCardMeta`, só pelo próprio usuário.
 
 ## Segurança — regras que não podem regredir
 
@@ -99,5 +101,13 @@ Mailinator, só serve pra fluxos de confirmação de e-mail):
   mas trabalhosa (projeto novo + SQL de novo + migrar dados e usuários +
   trocar URL/chave). Discutido, não executado.
 - Sem fluxo de "esqueci minha senha".
-- Roteiro pra virar app mobile (PWA → polimento de UI → Capacitor) já
-  desenhado numa conversa anterior, não iniciado.
+- Roteiro pra virar app mobile (PWA → polimento de UI → Capacitor): etapa
+  PWA concluída (`manifest.json`, ícones, meta tags, CSS "cara de app" —
+  sem service worker, de propósito, pra não conflitar com os headers
+  anti-cache do `netlify.toml`). Capacitor ainda não iniciado.
+- Importação/exportação de deck aceita dois formatos (TCG Live e Liga
+  Pokémon) — ver `parseDeckList`/`exportList`/`exportListLiga` em
+  `deck-logic.js`. A correção de `type` (Pokémon/Treinador/Energia) de
+  cartas mal-classificadas pelo `guessType()` por palavra-chave depende da
+  API do PTCG responder (`cardToMeta`/`applyCardMeta` em `api-ptcg.js`);
+  se a API estiver fora do ar, o palpite por palavra-chave fica valendo.
