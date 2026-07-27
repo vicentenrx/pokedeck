@@ -39,17 +39,6 @@ function mapRarity(apiRarity) {
   return 'Ultra Rara'; // qualquer coisa acima de "Rare" simples (holo, ultra, secreta, ilustração...)
 }
 
-// Cada raridade real vira uma consulta aproximada pra reencontrar uma carta
-// que combine com a categoria escolhida pelo usuário.
-const RARITY_QUERY = {
-  'Comum':      'rarity:Common',
-  'Incomum':    'rarity:Uncommon',
-  'Rara':       'rarity:Rare',
-  'Promo':      'rarity:Promo',
-  'ACE SPEC':   'rarity:"ACE SPEC Rare"',
-  'Ultra Rara': '(rarity:"Rare Holo" OR rarity:"Rare Holo EX" OR rarity:"Rare Holo GX" OR rarity:"Rare Holo V" OR rarity:"Rare Holo VMAX" OR rarity:"Rare Holo VSTAR" OR rarity:"Rare Ultra" OR rarity:"Rare Secret" OR rarity:"Rare Rainbow" OR rarity:"Double Rare" OR rarity:"Hyper Rare" OR rarity:"Illustration Rare" OR rarity:"Special Illustration Rare" OR rarity:"Amazing Rare" OR rarity:"Radiant Rare")',
-};
-
 function extractUsdPrice(card) {
   const variants = card?.tcgplayer?.prices;
   if (!variants) return null;
@@ -97,16 +86,16 @@ async function fetchCardMeta(name, setCode='') {
   } catch { return cardToMeta(null); }
 }
 
-// Busca a carta de mesmo nome que melhor combina com a raridade escolhida —
-// usada quando o usuário edita a raridade no painel de informações.
-async function fetchCardForRarity(name, rarityLabel) {
-  try {
-    const rarityQ = RARITY_QUERY[rarityLabel];
-    const query = rarityQ ? `name:"${name.trim()}" ${rarityQ}` : `name:"${name.trim()}"`;
-    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(query)}&pageSize=1&orderBy=-set.releaseDate`);
-    const d = await res.json();
-    return d.data?.[0] || null;
-  } catch { return null; }
+// Aplica só os campos que a busca realmente trouxe. Nunca apaga uma imagem,
+// preço ou raridade que a carta já tinha por causa de uma busca que não achou
+// nada (a API já se mostrou instável) — isso já causou perda de dados real.
+function applyCardMeta(card, meta) {
+  if (meta.img)              card.img = meta.img;
+  if (meta.imgLarge)         card.imgLarge = meta.imgLarge;
+  if (meta.number)           card.number = meta.number;
+  if (meta.rarity)           card.rarity = meta.rarity;
+  if (meta.priceUsd != null) card.priceUsd = meta.priceUsd;
+  if (meta.priceEur != null) card.priceEur = meta.priceEur;
 }
 
 async function loadSetsMap() {

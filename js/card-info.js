@@ -29,7 +29,7 @@ function openCardInfo(deckId, cardId) {
   infoFetchDone = !!card.priceUpdatedAt;
   renderCardInfo(card);
   openModal('m-info');
-  if (!card.priceUpdatedAt) refreshCardInfoMeta(card); // carta antiga/manual: tenta achar dados uma vez
+  if (!card.priceUpdatedAt) fetchAndApplyMeta(card); // carta antiga/manual: tenta achar dados uma vez
 }
 
 function renderCardInfo(card) {
@@ -41,16 +41,20 @@ function renderCardInfo(card) {
   const { code, number } = splitSetCode(card.set);
   $('info-set').textContent = setsMap[code] ? `${setsMap[code]} (${code})` : (code || '—');
   $('info-number').textContent = card.number || number || '—';
-  $('info-rarity').value = card.rarity || '';
+  $('info-rarity-value').textContent = card.rarity || '—';
+  $('info-condition').value = card.condition || 'NM';
   renderCardInfoPrice(card);
 }
 
 async function renderCardInfoPrice(card) {
-  const el  = $('info-price');
-  const sub = $('info-price-sub');
+  const el     = $('info-price');
+  const sub    = $('info-price-sub');
+  const retry  = $('info-price-retry');
+  retry.classList.add('hidden');
   if (card.priceUsd == null && card.priceEur == null) {
     el.textContent = infoFetchDone ? 'Sem preço disponível' : 'Buscando...';
     sub.textContent = '';
+    if (infoFetchDone) retry.classList.remove('hidden');
     return;
   }
   el.textContent = '···';
@@ -65,17 +69,18 @@ async function renderCardInfoPrice(card) {
     if (rate) { brl = card.priceEur * rate; source = `€ ${card.priceEur.toFixed(2)} · Cardmarket`; }
   }
   if (currentInfoCard()?.id !== card.id) return; // painel já fechou ou trocou de carta
-  if (brl == null) { el.textContent = 'Preço indisponível no momento'; return; }
-  el.textContent = formatBrl(brl);
-  sub.textContent = source + (card.priceUpdatedAt
-    ? ` · atualizado ${new Date(card.priceUpdatedAt).toLocaleDateString('pt-BR')}` : '');
+  if (brl == null) { el.textContent = 'Preço indisponível no momento'; retry.classList.remove('hidden'); return; }
+  const mult = CONDITION_MULT[card.condition] ?? 1;
+  el.textContent = formatBrl(brl * mult);
+  sub.textContent = `Base ${formatBrl(brl)} (${source}) · condição ${card.condition||'NM'}`
+    + (card.priceUpdatedAt ? ` · atualizado ${new Date(card.priceUpdatedAt).toLocaleDateString('pt-BR')}` : '');
 }
 
-async function refreshCardInfoMeta(card) {
+async function fetchAndApplyMeta(card) {
   const meta = await fetchCardMeta(card.name, card.set);
   const c = currentInfoCard();
   if (!c || c.id !== card.id) return; // usuário já fechou/trocou de carta
-  Object.assign(c, meta);
+  applyCardMeta(c, meta);
   if (meta.img) c.priceUpdatedAt = new Date().toISOString(); // achou: não precisa tentar de novo depois
   infoFetchDone = true;
   save();
@@ -84,28 +89,20 @@ async function refreshCardInfoMeta(card) {
 
 $('m-info-close').addEventListener('click', () => closeModal('m-info'));
 
-$('info-rarity').addEventListener('change', async () => {
+$('info-price-retry').addEventListener('click', () => {
   const card = currentInfoCard();
   if (!card) return;
-  const sel = $('info-rarity');
-  const newRarity = sel.value;
-  sel.disabled = true;
   $('info-price').textContent = 'Buscando...';
-  $('info-price-sub').textContent = '';
-  const match = await fetchCardForRarity(card.name, newRarity);
-  if (match) {
-    const meta = cardToMeta(match);
-    const setCode = match.set?.ptcgoCode || match.set?.id || '';
-    Object.assign(card, meta, {
-      rarity: newRarity,
-      set: setCode ? `${setCode} ${match.number || ''}`.trim() : card.set,
-      priceUpdatedAt: new Date().toISOString(),
-    });
-    toast('Carta atualizada para essa raridade!');
-  } else {
-    card.rarity = newRarity;
-    toast('Não encontrei uma carta dessa raridade — raridade salva mesmo assim.');
-  }
-  save(); renderAll(); renderCardInfo(card);
-  sel.disabled = false;
+  $('info-price-retry').classList.add('hidden');
+  fetchAndApplyMeta(card);
+});
+
+// Condição não depende de nenhuma busca — é só um multiplicador local sobre
+// o preço já obtido, então reage na hora, sem chamada de rede.
+$('info-condition').addEventListener('change', () => {
+  const card = currentInfoCard();
+  if (!card) return;
+  card.condition = $('info-condition').value;
+  save();
+  renderCardInfoPrice(card);
 });

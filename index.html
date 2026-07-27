@@ -278,22 +278,20 @@
         <div class="info-sub">
           <div class="info-row"><span class="info-label">Coleção</span><span class="info-value" id="info-set">—</span></div>
           <div class="info-row"><span class="info-label">Número</span><span class="info-value" id="info-number">—</span></div>
+          <div class="info-row"><span class="info-label">Raridade</span><span class="info-value" id="info-rarity-value">—</span></div>
         </div>
         <div class="info-price-block">
           <div class="info-label">Valor estimado</div>
           <div class="info-price" id="info-price">—</div>
           <div class="info-price-sub" id="info-price-sub"></div>
+          <button class="info-retry hidden" id="info-price-retry" type="button">↻ Tentar buscar de novo</button>
         </div>
         <div class="mf">
-          <label>Raridade</label>
-          <select class="mi" id="info-rarity">
-            <option value="">—</option>
-            <option value="Comum">Comum</option>
-            <option value="Incomum">Incomum</option>
-            <option value="Rara">Rara</option>
-            <option value="Ultra Rara">Ultra Rara</option>
-            <option value="Promo">Promo</option>
-            <option value="ACE SPEC">ACE SPEC</option>
+          <label>Condição da carta</label>
+          <select class="mi" id="info-condition">
+            <option value="NM">NM — Praticamente Nova</option>
+            <option value="SP">SP — Usada Levemente</option>
+            <option value="D">D — Danificada</option>
           </select>
         </div>
       </div>

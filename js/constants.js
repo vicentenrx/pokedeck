@@ -4,6 +4,11 @@
 const COLORS    = ['#E3350D','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#64748B','#F97316'];
 const TC        = { 'Pokémon':'#E3350D','Treinador':'#3B82F6','Energia':'#F59E0B' };
 const TE        = { 'Pokémon':'🔴','Treinador':'🔵','Energia':'⚡' };
+
+// Condição física da carta — multiplicador aproximado sobre o preço de mercado
+// (que já reflete uma carta em bom estado). Não vem de nenhuma API: é estimativa.
+const CONDITION_LABEL = { NM:'NM — Praticamente Nova', SP:'SP — Usada Levemente', D:'D — Danificada' };
+const CONDITION_MULT  = { NM:1, SP:0.75, D:0.4 };
 const PTCG      = 'https://api.pokemontcg.io/v2';
 const PTCG_KEY  = 'c36319a5-b878-49e1-8cdd-288aa3804a48';
 const STATE_KEY = 'pokedeck_v4';

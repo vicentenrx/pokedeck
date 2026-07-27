@@ -198,7 +198,7 @@ $('m-card-save').addEventListener('click', async () => {
   const qty  = Math.max(1, Math.min(isEnergy ? 60 : 4, parseInt($('c-qty').value)||1));
   const card = {
     id:uid(), name, set:$('c-set').value.trim(), qty, owned:0, type:$('c-type').value, img:$('c-img').value,
-    imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null,
+    imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null, condition:'NM',
     priceUpdatedAt: pendingCardMeta ? new Date().toISOString() : null,
     ...(pendingCardMeta || {}),
   };
@@ -207,7 +207,7 @@ $('m-card-save').addEventListener('click', async () => {
   save(); closeModal('m-card'); renderAll(); toast('Carta adicionada!');
   if (!pendingCardMeta) { // veio de preenchimento manual: tenta achar preço/raridade em segundo plano
     const meta = await fetchCardMeta(card.name, card.set);
-    Object.assign(card, meta);
+    applyCardMeta(card, meta);
     if (meta.img) card.priceUpdatedAt = new Date().toISOString(); // achou: não precisa tentar de novo depois
     save(); renderAll();
   }
@@ -227,7 +227,8 @@ $('m-import-save').addEventListener('click', async () => {
   if (!parsed.length) { toast('Nenhuma carta reconhecida. Verifique o formato.'); return; }
   const deck = activeDeck();
   const newCards = parsed.map(p => ({
-    id:uid(), ...p, owned:0, img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null, priceUpdatedAt:null,
+    id:uid(), ...p, owned:0, img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null,
+    priceUpdatedAt:null, condition:'NM',
   }));
   deck.cards.push(...newCards);
   save(); closeModal('m-import'); renderAll();
@@ -237,7 +238,7 @@ $('m-import-save').addEventListener('click', async () => {
     const meta = await fetchCardMeta(card.name, card.set);
     if (meta.img) {
       const c = deck.cards.find(x=>x.id===card.id);
-      if (c) { Object.assign(c, meta, { priceUpdatedAt: new Date().toISOString() }); fetched++; }
+      if (c) { applyCardMeta(c, meta); c.priceUpdatedAt = new Date().toISOString(); fetched++; }
     }
     if (fetched%4===0 && fetched>0) { save(); renderAll(); }
   }
