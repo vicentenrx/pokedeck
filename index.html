@@ -123,7 +123,7 @@
       <div class="st-sep">·</div>
       <div class="st-chip"><b id="s-tot">0</b> total</div>
       <div class="st-sep" id="s-value-sep">·</div>
-      <div class="st-chip" id="s-value-chip" title="Valor estimado do deck completo, considerando a condição de cada carta">💰 <b id="s-value">—</b></div>
+      <div class="st-chip st-chip-value" id="s-value-chip" title="Valor estimado do deck completo, considerando a condição de cada carta"><b id="s-value">—</b></div>
       <div class="prog-wrap">
         <div class="prog-track"><div class="prog-fill" id="pb" style="width:0%"></div></div>
         <div class="prog-pct" id="ppct">0%</div>
@@ -160,7 +160,15 @@
         <p>Adicione cartas com o botão <strong>+ Carta</strong> ou importe uma lista do TCG Live.</p>
       </div>
     </div>
-    <button id="btn-add-card-fab" title="Adicionar carta">+</button>
+    <div id="mobile-tabbar">
+      <button id="btn-import-mobile" class="mtb-btn" title="Importar lista">
+        <span class="mtb-icon">↓</span><span class="mtb-lbl">Importar</span>
+      </button>
+      <button id="btn-add-card-fab" title="Adicionar carta">+</button>
+      <button id="btn-export-mobile" class="mtb-btn" title="Exportar lista">
+        <span class="mtb-icon">↑</span><span class="mtb-lbl">Exportar</span>
+      </button>
+    </div>
   </div>
 </div>
 

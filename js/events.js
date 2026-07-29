@@ -81,7 +81,7 @@ $('btn-new-deck').addEventListener('click',   openNewDeckModal);
 $('btn-first-deck').addEventListener('click', openNewDeckModal);
 
 // Edit deck
-$('btn-edit-deck').addEventListener('click', () => {
+function openEditDeckModal() {
   const deck = activeDeck();
   if (!deck) return;
   editDeckId = deck.id;
@@ -92,7 +92,12 @@ $('btn-edit-deck').addEventListener('click', () => {
   buildColorPicker();
   openModal('m-deck');
   setTimeout(() => $('d-name').focus(), 60);
-});
+}
+$('btn-edit-deck').addEventListener('click', openEditDeckModal);
+// Mobile: tap the deck name/format in the topbar to edit (Import/Export/Edit
+// buttons are hidden there below 720px — see responsive.css — in favor of the
+// bottom action bar, so the heading itself becomes the edit affordance).
+$('dk-head').addEventListener('click', openEditDeckModal);
 
 // Save deck modal
 $('m-deck-cancel').addEventListener('click', () => closeModal('m-deck'));
@@ -112,8 +117,10 @@ $('m-deck-save').addEventListener('click', () => {
   save(); closeModal('m-deck'); renderAll();
 });
 
-// Add card (FAB mobile reusa o mesmo fluxo do botão da topbar)
+// Mobile bottom bar reusa o mesmo fluxo dos botões da topbar (evita duplicar lógica)
 $('btn-add-card-fab').addEventListener('click', () => $('btn-add-card').click());
+$('btn-import-mobile').addEventListener('click', () => $('btn-import').click());
+$('btn-export-mobile').addEventListener('click', () => $('btn-export').click());
 
 $('btn-add-card').addEventListener('click', async () => {
   $('c-search').value=''; $('c-name').value=''; $('c-set').value='';
