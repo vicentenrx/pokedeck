@@ -84,23 +84,102 @@ Por isso:
 
 `.claude/launch.json` roda `python -m http.server` numa porta. **Cuidado:**
 esse servidor não manda cache headers, então o navegador às vezes serve
-JS/CSS antigo mesmo depois de editar. Se um teste mostrar comportamento que
-não bate com o código atual, suspeite de cache antes de assumir que há um
-bug de verdade — reinicie numa porta nova ou refaça o fetch com
-`{cache:'no-store'}` pra confirmar.
+JS/CSS antigo mesmo depois de editar — inclusive arquivo por arquivo (o
+HTML pode recarregar fresco enquanto um `.js` específico continua vindo do
+cache). Se um teste mostrar comportamento que não bate com o código atual,
+suspeite de cache antes de assumir que há um bug de verdade. Formas de
+confirmar: mudar a porta em `launch.json` (bytes vindos de uma porta nova
+nunca têm cache prévio) ou injetar o arquivo específico de novo com um
+parâmetro de cache-bust (`<script src="js/arquivo.js?bust=123">`) via
+console — mais rápido que reiniciar o servidor quando é só um arquivo.
 
-Conta de teste descartável (não é do usuário real, inbox pública do
-Mailinator, só serve pra fluxos de confirmação de e-mail):
-`pokedeck.verify.test@mailinator.com`.
+Contas de teste descartáveis (não são de usuário real, inbox pública do
+Mailinator — qualquer um pode ler, nunca usar pra algo sensível):
+`pokedeck.verify.test@mailinator.com` e variações como
+`pokedeck.verify.test.<algo>@mailinator.com` (endereços Mailinator são
+válidos com qualquer texto antes do @, cada um é uma inbox pública própria).
+
+**Testando fluxos de e-mail (confirmação de cadastro, recuperação de senha)
+de ponta a ponta, com e-mail de verdade:**
+1. Adicionar `http://localhost:<porta>/*` em Supabase → Authentication →
+   URL Configuration → Redirect URLs (a lista vem vazia por padrão; sem
+   isso o Supabase ignora o redirect local e manda pro Site URL de
+   produção). Pode deixar essa entrada lá, é aditivo e não atrapalha nada.
+2. Disparar o fluxo (`signUp`/`requestPasswordReset`) com um e-mail
+   Mailinator.
+3. Buscar o e-mail via API pública da Mailinator (não precisa abrir
+   navegador): `curl -s https://api.mailinator.com/api/v2/domains/public/inboxes/<inbox>`
+   pra pegar o `id` da mensagem, depois
+   `curl -s https://api.mailinator.com/api/v2/domains/public/inboxes/<inbox>/messages/<id>`
+   pro conteúdo completo (JSON com `parts[].body` em HTML).
+4. O link dentro do e-mail é um redirect de rastreamento da Brevo
+   (`*.sendibt*.com/tr/cl/...`), não o link do Supabase direto. Resolver com
+   `curl -s -L -o /dev/null -w '%{url_effective}' "<link>"` — o resultado é
+   a URL final do app com o hash de verdade
+   (`#access_token=...&type=recovery` ou `type=signup`). **Esse link também
+   consome (single-use)** — só resolver uma vez, senão o próximo teste cai
+   em `otp_expired`.
+5. Abrir essa URL final no navegador (ou aplicar o hash direto) — só
+   funciona como navegação de página nova de verdade (mudar só o hash numa
+   aba já aberta não recarrega o JS, então `init()` não roda de novo).
+
+## Lições de UI mobile (já viraram bug de verdade uma vez cada)
+
+- **Nada essencial pode depender só de `:hover`.** Touch não tem hover. Já
+  aconteceu com o botão de excluir deck (`opacity:0` até `:hover`) — ficava
+  literalmente invisível e inacessível no celular. Qualquer ação necessária
+  (excluir, editar, etc.) precisa estar visível/tocável sem hover; hover no
+  máximo estiliza um estado, nunca é a única forma de revelar o elemento.
+- **Alvo de toque mínimo ~40px**, não o tamanho visual do ícone. A alcinha
+  de arrastar deck (`.dk-handle`) tinha só ~19x17px de área clicável (ícone
+  de 13px + 2-3px de padding) — fácil de errar com o dedo, mesmo com a
+  lógica de arrastar 100% correta por trás. Aumentar padding/área sem
+  necessariamente aumentar o ícone visual resolve sem mudar o design.
+- **Foco automático de campo de texto sobe o teclado na hora** — se o
+  elemento focado ficar perto do topo de um modal centralizado, o teclado
+  cobre o resto do modal inteiro. Evitar `.focus()` automático em campos de
+  busca/texto ao abrir modal no mobile; deixar a pessoa tocar quando quiser.
+- **HTML5 drag-and-drop nativo (`draggable="true"` + `dragstart`/`drop`) não
+  funciona em touch em nenhum navegador mobile.** Qualquer reordenação por
+  arrastar precisa ser Pointer Events (`pointerdown`/`pointermove`/
+  `pointerup`, unifica mouse e touch) — ver `dragdrop.js`.
 
 ## Pendências conhecidas
 
-- SMTP (Brevo): configurado, status de funcionamento não confirmado na
-  última sessão.
+- SMTP (Brevo): **confirmado funcionando** (2026-07-29, testado de ponta a
+  ponta com e-mail real). Os dois problemas eram: (1) Username no Supabase
+  estava com o e-mail do remetente em vez do login SMTP de verdade da Brevo
+  (formato `bXXXXXXX@smtp-brevo.com`, visível em Brevo → SMTP & API → SMTP,
+  não confundir com o e-mail da conta); (2) a Brevo tinha "IP autorizado"
+  ativado pro SMTP, e o Supabase não usa IP fixo — precisa ficar desativado.
+  Erro no log do Supabase (`Authentication → Logs`, evento `/signup` ou
+  `/recover`, aba Raw) aparecia como `535 Authentication failed` (causa 1) ou
+  `525 Unauthorized IP address` (causa 2) — diagnóstico direto pelo log, não
+  pela mensagem genérica que o app mostra.
+- "Esqueci minha senha": **implementado** (`requestPasswordReset`/
+  `confirmPasswordReset` em `api-auth.js`, telas nos ids `ag-form-forgot`/
+  `ag-fg-sent`/`ag-form-reset`/`ag-rs-done` em `index.html`, lógica em
+  `auth-gate.js`). Reaproveita o endpoint `/auth/v1/recover` do Supabase.
+- Mensagem "Bem-vindo de volta!" no login mostrada até pra quem tá entrando
+  pela primeira vez de verdade: arquitetura já desenhada (não implementada)
+  — generalizar `parseRecoveryHash()` pra `parseAuthRedirectHash()`, tratando
+  também `type=signup` (confirmado por teste real: link de confirmação de
+  cadastro sempre volta com `#access_token=...&type=signup`, igual ao
+  `type=recovery` já tratado). Como a confirmação de e-mail é obrigatória
+  neste projeto, **todo primeiro login de verdade passa por esse redirect**
+  (testado: login sem confirmar retorna 400 `email_not_confirmed`) — então
+  dá pra usar isso como sinal 100% confiável, sem heurística de data/hora.
+  Decisão já tomada: pré-preencher o e-mail e deixar a pessoa digitar a
+  senha normalmente (não logar automaticamente construindo uma sessão à
+  mão — isso duplicaria o caminho de login de verdade sem necessidade).
 - Migração de região do Supabase (US → São Paulo/`sa-east-1`): possível,
   mas trabalhosa (projeto novo + SQL de novo + migrar dados e usuários +
-  trocar URL/chave). Discutido, não executado.
-- Sem fluxo de "esqueci minha senha".
+  trocar URL/chave). **Análise de impacto já feita**: `save()` em `state.js`
+  chama `syncSb()` sem `await` (fire-and-forget) — ou seja, a região do
+  Supabase **não afeta** a sensação de resposta ao tocar numa carta/deck, só
+  afeta o que é de fato esperado (`await`): login (`signIn`) e carregamento
+  inicial (`loadSb` em `enterApp`/`init`). Vale a pena, mas o ganho real é
+  só nesses dois momentos, não no uso do dia a dia. Discutido, não executado.
 - Roteiro pra virar app mobile (PWA → polimento de UI → Capacitor): etapa
   PWA concluída (`manifest.json`, ícones, meta tags, CSS "cara de app" —
   sem service worker, de propósito, pra não conflitar com os headers
@@ -111,3 +190,24 @@ Mailinator, só serve pra fluxos de confirmação de e-mail):
   cartas mal-classificadas pelo `guessType()` por palavra-chave depende da
   API do PTCG responder (`cardToMeta`/`applyCardMeta` em `api-ptcg.js`);
   se a API estiver fora do ar, o palpite por palavra-chave fica valendo.
+
+## Como trabalhar nesse projeto (processo, não código)
+
+- **Esta pasta é o clone git de verdade** (tem `.git`, é a mesma que está no
+  GitHub). Editar, commitar e dar push sempre a partir daqui — nunca deixar
+  o local divergir do repositório remoto. Se em algum momento existir outra
+  cópia da pasta em outro lugar, ela é rascunho velho, não a fonte da
+  verdade — confirmar com `git status`/`git log` antes de assumir qual é.
+- **Verificar antes de afirmar.** Bug "corrigido" ou feature "funcionando"
+  só depois de testar de verdade (navegador automatizado, conta de teste
+  real, log de erro real) — não só ler o código e assumir que está certo.
+  Já aconteceu mais de uma vez o código parecer óbvio e o comportamento real
+  ser diferente (cache do navegador, API de terceiro instável, etc.).
+- **Mudança de infraestrutura (Supabase, Brevo, migração de região, etc.)
+  sempre se discute antes de executar**, mesmo com acesso liberado — são
+  ações difíceis de reverter e existem contas/usuários reais.
+- **Ao final de uma sessão** (quando a pessoa der um "boa noite" ou
+  equivalente), perguntar o que ela quer resolver na próxima sessão antes de
+  encerrar, e guardar a resposta (memória do Claude e/ou aqui no CLAUDE.md,
+  conforme o tipo de informação) — evita perder contexto se a conversa
+  reiniciar do zero.

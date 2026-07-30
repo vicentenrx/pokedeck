@@ -12,15 +12,26 @@ function ptcgFetch(url, timeoutMs=7000) {
     .finally(() => clearTimeout(timer));
 }
 
+// Retorna null quando a busca falhou de verdade (API fora do ar/erro HTTP),
+// e um array (vazio ou não) quando a busca respondeu normalmente — o
+// chamador precisa distinguir os dois casos ("API falhou" vs "carta não
+// existe"), que antes mostravam a mesma mensagem pro usuário. Tenta 2 vezes
+// porque a API já se mostrou instável a ponto de a mesma busca falhar e
+// funcionar segundos depois.
 async function apiSearch(q, limit=20, setCode='') {
   if (!q || q.length < 2) return [];
-  try {
-    let query = `name:"${q.trim()}"`;
-    if (setCode) query += ` set.ptcgoCode:${setCode}`;
-    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(query)}&pageSize=${limit}`);
-    const d = await res.json();
-    return d.data || [];
-  } catch { return []; }
+  let query = `name:"${q.trim()}"`;
+  if (setCode) query += ` set.ptcgoCode:${setCode}`;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(query)}&pageSize=${limit}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      return d.data || [];
+    } catch (err) {
+      if (attempt === 2) { console.warn('[ptcg] apiSearch falhou:', err); return null; }
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════

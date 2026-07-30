@@ -128,7 +128,8 @@ $('btn-add-card').addEventListener('click', async () => {
   pendingCardMeta = null;
   hideSugg();
   openModal('m-card');
-  setTimeout(() => $('c-search').focus(), 60);
+  // Sem foco automático: no mobile o teclado sobe na hora e tampa quase a
+  // tela inteira do modal antes da pessoa nem ver os campos. Ela toca pra buscar quando quiser.
   // Atualiza limite do campo qty conforme tipo selecionado
   $('c-type').addEventListener('change', () => {
     const isEnergy = $('c-type').value === 'Energia';
@@ -175,6 +176,7 @@ $('c-search').addEventListener('input', () => {
   showSugg();
   searchTmr = setTimeout(async () => {
     const results = await apiSearch(q, 20, $('api-set-filter').value);
+    if (results === null) { sugg.innerHTML='<div class="cs-load">Não conseguimos buscar agora — a API do Pokémon TCG está instável. Tente de novo em instantes ou preencha manualmente.</div>'; return; }
     if (!results.length) { sugg.innerHTML='<div class="cs-load">Nenhuma carta encontrada. Preencha manualmente.</div>'; return; }
     sugg.innerHTML = '';
     results.forEach(card => {
