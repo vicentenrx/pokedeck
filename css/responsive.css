@@ -52,10 +52,11 @@
      recuperar senha continuam com o cartão normal, que ajuda a agrupar
      o texto explicativo delas. */
   .ag-glow{display:none}
-  #auth-gate{align-items:flex-start}
+  .ag-ball{width:80px;height:80px}
+  .ag-title{font-size:30px}
   .ag-card:has(#ag-form-signin:not(.hidden)),
   .ag-card:has(#ag-form-signup:not(.hidden)){
-    margin-top:9vh;background:transparent;border:none;box-shadow:none;padding:0;
+    background:transparent;border:none;box-shadow:none;padding:0;
   }
   .ag-tabs{gap:0;padding:0;border:none;overflow:hidden}
   .ag-tab{border-radius:0;min-height:44px}
