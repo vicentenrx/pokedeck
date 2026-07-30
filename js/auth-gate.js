@@ -26,10 +26,6 @@ function showAgView(id) {
   $('ag-tabs').classList.toggle('hidden', !isAuthTab);
   $('ag-tab-signin').classList.toggle('active', id === 'ag-form-signin');
   $('ag-tab-signup').classList.toggle('active', id === 'ag-form-signup');
-  // Cartão "achatado" (sem borda/sombra) só faz sentido em Entrar/Criar
-  // Conta — as telas de verificar e-mail/recuperar senha mantêm o cartão
-  // normal, que ajuda a agrupar o texto explicativo delas.
-  $('ag-card').classList.toggle('ag-flat', isAuthTab);
 }
 
 function switchAgTab(tab) {
