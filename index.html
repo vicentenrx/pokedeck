@@ -38,7 +38,7 @@
       <div class="ag-title">PokéDeck</div>
     </div>
 
-    <div class="ag-tabs">
+    <div class="ag-tabs" id="ag-tabs">
       <button class="ag-tab active" id="ag-tab-signin" type="button">Entrar</button>
       <button class="ag-tab" id="ag-tab-signup" type="button">Criar Conta</button>
     </div>
@@ -49,6 +49,7 @@
         <div class="mf"><label>Senha</label><input class="mi" id="ag-in-password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
         <div class="ag-error hidden" id="ag-in-error"></div>
         <button type="submit" class="ag-submit" id="ag-in-submit">Entrar</button>
+        <button class="ag-link-btn ag-forgot-link" id="ag-forgot-link" type="button">Esqueci minha senha</button>
       </form>
 
       <form class="ag-form hidden" id="ag-form-signup" novalidate>
@@ -64,6 +65,34 @@
         <h3>Verifique seu e-mail</h3>
         <p>Enviamos um link de confirmação para <b id="ag-verify-email"></b>. Clique nele para ativar sua conta e depois volte aqui para entrar.</p>
         <button class="ag-link-btn" id="ag-back-to-login" type="button">← Voltar para o login</button>
+      </div>
+
+      <form class="ag-form hidden" id="ag-form-forgot" novalidate>
+        <div class="mf"><label>E-mail</label><input class="mi" id="ag-fg-email" type="email" placeholder="voce@email.com" autocomplete="email"></div>
+        <div class="ag-error hidden" id="ag-fg-error"></div>
+        <button type="submit" class="ag-submit" id="ag-fg-submit">Enviar link de recuperação</button>
+        <button class="ag-link-btn ag-forgot-link" id="ag-fg-back" type="button">← Voltar para o login</button>
+      </form>
+
+      <div class="ag-verify hidden" id="ag-fg-sent">
+        <div class="ag-verify-icon">✉️</div>
+        <h3>Verifique seu e-mail</h3>
+        <p>Se houver uma conta com o e-mail <b id="ag-fg-sent-email"></b>, enviamos um link pra você redefinir sua senha.</p>
+        <button class="ag-link-btn" id="ag-fg-sent-back" type="button">← Voltar para o login</button>
+      </div>
+
+      <form class="ag-form hidden" id="ag-form-reset" novalidate>
+        <div class="mf"><label>Nova senha</label><input class="mi" id="ag-rs-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+        <div class="mf"><label>Confirmar nova senha</label><input class="mi" id="ag-rs-password2" type="password" placeholder="Repita a senha" autocomplete="new-password"></div>
+        <div class="ag-error hidden" id="ag-rs-error"></div>
+        <button type="submit" class="ag-submit" id="ag-rs-submit">Salvar nova senha</button>
+      </form>
+
+      <div class="ag-verify hidden" id="ag-rs-done">
+        <div class="ag-verify-icon">✅</div>
+        <h3>Senha atualizada!</h3>
+        <p>Sua senha foi redefinida. Entre com sua nova senha pra continuar.</p>
+        <button class="ag-link-btn" id="ag-rs-done-back" type="button">← Ir para o login</button>
       </div>
     </div>
   </div>
@@ -81,7 +110,9 @@
   <div id="deck-list"></div>
   <div id="sb-account">
     <span id="sb-account-email"></span>
-    <button id="sb-logout-btn" title="Sair">⏻</button>
+    <button id="sb-logout-btn" title="Sair">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+    </button>
   </div>
   <button id="btn-new-deck">+ Novo Deck</button>
 </div>

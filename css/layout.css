@@ -20,8 +20,10 @@
 .dk-item.active{background:var(--red-light);border-color:var(--red-border)}
 .dk-item.drag-over{border-color:var(--red);background:var(--red-light)}
 .dk-item.dragging{opacity:.35}
-.dk-handle{color:var(--g500);font-size:13px;cursor:grab;padding:2px 3px;transition:color .12s;flex-shrink:0;line-height:1}
+.dk-handle{color:var(--g500);font-size:13px;cursor:grab;padding:2px 3px;transition:color .12s;flex-shrink:0;line-height:1;touch-action:none}
 .dk-item:hover .dk-handle{color:var(--g300)}
+.dk-item.dragging{cursor:grabbing;position:relative;z-index:5}
+.dk-item.dragging .dk-handle{cursor:grabbing}
 .dk-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
 .dk-body{flex:1;min-width:0}
 .dk-name{font-size:13px;font-weight:600;color:var(--g200);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -90,7 +92,7 @@
 #sb-account{display:flex;align-items:center;gap:8px;padding:10px 14px;margin:0 8px;
   border-top:1px solid var(--g700);flex-shrink:0}
 #sb-account-email{flex:1;font-size:11px;color:var(--g400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sb-logout-btn{background:none;border:none;color:var(--g500);font-size:14px;padding:4px 6px;border-radius:6px;
+#sb-logout-btn{display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--g500);padding:6px;border-radius:6px;
   transition:color .12s,background .12s;flex-shrink:0}
 #sb-logout-btn:hover{color:var(--red);background:var(--red-light)}
 

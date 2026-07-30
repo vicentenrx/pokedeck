@@ -12,7 +12,7 @@
   #statsbar{padding:0 12px;gap:10px}
   .st-sep{display:none}
   #filterbar{padding:10px 12px 6px;gap:6px}
-  #content{padding:8px 12px calc(88px + env(safe-area-inset-bottom))}
+  #content{padding:8px 12px calc(96px + env(safe-area-inset-bottom))}
   #size-warn{display:none}
   #card-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px}
   .c-row,.c-row-head{grid-template-columns:26px 20px 1fr 96px 96px}
@@ -23,8 +23,9 @@
   #mobile-tabbar{
     display:flex;align-items:center;justify-content:space-between;
     position:fixed;left:0;right:0;bottom:0;z-index:40;
-    padding:8px 28px calc(8px + env(safe-area-inset-bottom));
-    background:var(--g900);border-top:1px solid var(--g700);
+    padding:12px 28px calc(12px + env(safe-area-inset-bottom));
+    background:rgba(22,22,22,.72);border-top:1px solid var(--g700);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   }
   .mtb-btn{
     display:flex;flex-direction:column;align-items:center;gap:2px;
@@ -36,9 +37,9 @@
   .mtb-lbl{font-size:10px;font-weight:700;letter-spacing:.02em}
   #btn-add-card-fab{
     display:flex;align-items:center;justify-content:center;flex-shrink:0;
-    width:56px;height:56px;border-radius:50%;margin-top:-34px;
+    width:68px;height:68px;border-radius:50%;margin-top:-42px;
     background:var(--red);color:var(--white);border:3px solid var(--g900);
-    font-size:28px;font-weight:700;line-height:1;
+    font-size:34px;font-weight:700;line-height:1;
     box-shadow:0 4px 16px rgba(227,53,13,.4),0 2px 6px rgba(0,0,0,.35);
     transition:transform .12s var(--ease-out);
   }

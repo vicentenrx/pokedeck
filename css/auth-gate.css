@@ -51,6 +51,7 @@
 .ag-verify p b{color:var(--white)}
 .ag-link-btn{background:none;border:none;color:var(--red);font-size:12px;font-weight:700}
 .ag-link-btn:hover{text-decoration:underline}
+.ag-forgot-link{margin-top:14px;text-align:center}
 
 @media(max-width:420px){
   .ag-card{padding:26px 20px;border-radius:16px}

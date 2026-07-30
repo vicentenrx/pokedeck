@@ -53,6 +53,31 @@ async function signOut() {
   saveLocal();
 }
 
+// E-mail de recuperação de senha. O Supabase sempre responde 200 aqui,
+// exista ou não a conta — evita que alguém descubra e-mails cadastrados
+// testando essa tela. A tela precisa refletir essa ambiguidade também.
+async function requestPasswordReset(email) {
+  const redirectTo = encodeURIComponent(location.origin + location.pathname);
+  await authRequest(`/recover?redirect_to=${redirectTo}`, { email });
+}
+
+// Chamado depois que o usuário clica no link do e-mail de recuperação —
+// accessToken vem do fragmento da URL (#...&type=recovery), não de um login normal.
+async function confirmPasswordReset(accessToken, newPassword) {
+  const res = await fetch(`${SB_URL}/auth/v1/user`, {
+    method: 'PUT',
+    headers: {
+      'apikey': SB_ANON_KEY,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ password: newPassword }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error_description || data.msg || 'Não foi possível atualizar a senha.');
+  return data;
+}
+
 async function refreshSessionIfNeeded() {
   if (!session) return;
   if (Date.now() < session.expires_at - 60000) return; // ainda válida (margem de 1min)

@@ -11,13 +11,25 @@ function hideAuthGate() {
   $('auth-gate').classList.add('hidden');
 }
 
+// Todas as "telas" dentro do cartão de auth — sign in, cadastro, aviso de
+// confirmação de e-mail, e agora o fluxo de recuperação de senha (pedido +
+// aviso de envio + definir nova senha + sucesso). Só uma fica visível por vez.
+const AG_VIEWS = [
+  'ag-form-signin', 'ag-form-signup', 'ag-verify',
+  'ag-form-forgot', 'ag-fg-sent', 'ag-form-reset', 'ag-rs-done',
+];
+function showAgView(id) {
+  AG_VIEWS.forEach(v => $(v).classList.toggle('hidden', v !== id));
+  // As abas Entrar/Criar Conta só fazem sentido durante login/cadastro —
+  // no fluxo de recuperação de senha elas ficam escondidas.
+  const isAuthTab = id === 'ag-form-signin' || id === 'ag-form-signup';
+  $('ag-tabs').classList.toggle('hidden', !isAuthTab);
+  $('ag-tab-signin').classList.toggle('active', id === 'ag-form-signin');
+  $('ag-tab-signup').classList.toggle('active', id === 'ag-form-signup');
+}
+
 function switchAgTab(tab) {
-  const isSignin = tab === 'signin';
-  $('ag-tab-signin').classList.toggle('active', isSignin);
-  $('ag-tab-signup').classList.toggle('active', !isSignin);
-  $('ag-form-signin').classList.toggle('hidden', !isSignin);
-  $('ag-form-signup').classList.toggle('hidden', isSignin);
-  $('ag-verify').classList.add('hidden');
+  showAgView(tab === 'signin' ? 'ag-form-signin' : 'ag-form-signup');
   setAgError('ag-in-error', '');
   setAgError('ag-up-error', '');
 }
@@ -80,8 +92,7 @@ $('ag-form-signup').addEventListener('submit', async e => {
     const r = await signUp(email, password);
     if (r.needsConfirmation) {
       $('ag-verify-email').textContent = email;
-      $('ag-form-signup').classList.add('hidden');
-      $('ag-verify').classList.remove('hidden');
+      showAgView('ag-verify');
     } else {
       await syncSb();
       await enterApp();
@@ -91,5 +102,74 @@ $('ag-form-signup').addEventListener('submit', async e => {
     setAgError('ag-up-error', friendlyAuthError(err.message));
   } finally {
     btn.disabled = false; btn.textContent = 'Criar Conta';
+  }
+});
+
+// ── Recuperação de senha ──────────────────────────────────────
+let _recoveryToken = null;
+
+// O Supabase manda o usuário de volta com os tokens no #fragmento da URL
+// (não em ?query), no formato "#access_token=...&type=recovery&...".
+function parseRecoveryHash() {
+  if (!location.hash.includes('type=recovery')) return null;
+  const params = new URLSearchParams(location.hash.slice(1));
+  const access_token = params.get('access_token');
+  return access_token ? { access_token } : null;
+}
+
+// Chamado no boot (main.js) se o link do e-mail de recuperação trouxe o
+// usuário de volta pro app. Precisa vir antes de qualquer outra lógica de
+// sessão — esse token só serve pra trocar a senha, não é um login normal.
+function initRecoveryFlow() {
+  const recovery = parseRecoveryHash();
+  if (!recovery) return false;
+  _recoveryToken = recovery.access_token;
+  history.replaceState(null, '', location.pathname); // tira o token da URL visível
+  $('auth-gate').classList.remove('hidden');
+  showAgView('ag-form-reset');
+  return true;
+}
+
+$('ag-forgot-link').addEventListener('click', () => {
+  $('ag-fg-email').value = $('ag-in-email').value.trim();
+  showAgView('ag-form-forgot');
+  setTimeout(() => $('ag-fg-email').focus(), 60);
+});
+$('ag-fg-back').addEventListener('click', () => switchAgTab('signin'));
+$('ag-fg-sent-back').addEventListener('click', () => switchAgTab('signin'));
+$('ag-rs-done-back').addEventListener('click', () => switchAgTab('signin'));
+
+$('ag-form-forgot').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = $('ag-fg-email').value.trim();
+  if (!email) { setAgError('ag-fg-error', 'Preencha seu e-mail.'); return; }
+  const btn = $('ag-fg-submit');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    await requestPasswordReset(email);
+    $('ag-fg-sent-email').textContent = email;
+    showAgView('ag-fg-sent');
+  } catch (err) {
+    setAgError('ag-fg-error', friendlyAuthError(err.message));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar link de recuperação';
+  }
+});
+
+$('ag-form-reset').addEventListener('submit', async e => {
+  e.preventDefault();
+  const p1 = $('ag-rs-password').value;
+  const p2 = $('ag-rs-password2').value;
+  if (p1.length < 6)  { setAgError('ag-rs-error', 'A senha precisa ter pelo menos 6 caracteres.'); return; }
+  if (p1 !== p2)      { setAgError('ag-rs-error', 'As senhas não coincidem.'); return; }
+  const btn = $('ag-rs-submit');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    await confirmPasswordReset(_recoveryToken, p1);
+    showAgView('ag-rs-done');
+  } catch (err) {
+    setAgError('ag-rs-error', friendlyAuthError(err.message));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
   }
 });
