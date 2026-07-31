@@ -79,25 +79,36 @@ function cardToMeta(card) {
   };
 }
 
+// Medido direto em 2026-07-30: de 15 nomes de carta comuns, 7 vieram com
+// erro 500 na primeira tentativa (quase metade!). É a causa real de "a
+// maioria das cartas fica sem foto" — antes essa função tentava só uma vez.
+// 3 tentativas (não 2, como em apiSearch) porque essa aqui roda em segundo
+// plano sem ninguém esperando na tela, então vale gastar mais tempo pra
+// não perder a imagem por causa de instabilidade momentânea da API.
 async function fetchCardMeta(name, setCode='') {
   const key = (name+setCode).toLowerCase().trim();
   if (imgCache[key] !== undefined) return imgCache[key];
-  try {
-    let q = `name:"${name.trim()}"`;
-    if (setCode) {
-      const parts = setCode.trim().split(/\s+/);
-      const num = parts[parts.length-1];
-      if (/^\w+$/.test(num)) q += ` number:${num}`;
+  let q = `name:"${name.trim()}"`;
+  if (setCode) {
+    const parts = setCode.trim().split(/\s+/);
+    const num = parts[parts.length-1];
+    if (/^\w+$/.test(num)) q += ` number:${num}`;
+  }
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(q)}&pageSize=1`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      const meta = cardToMeta(d.data?.[0]);
+      // Só guarda em cache um resultado de verdade — a API já se mostrou instável
+      // (fora do ar por minutos seguidos); cachear uma falha faria o app nunca
+      // mais tentar de novo pra essa carta na mesma sessão.
+      if (meta.img) imgCache[key] = meta;
+      return meta;
+    } catch (err) {
+      if (attempt === 3) { console.warn('[ptcg] fetchCardMeta falhou 3x:', err); return cardToMeta(null); }
     }
-    const res = await ptcgFetch(`${PTCG}/cards?q=${encodeURIComponent(q)}&pageSize=1`);
-    const d = await res.json();
-    const meta = cardToMeta(d.data?.[0]);
-    // Só guarda em cache um resultado de verdade — a API já se mostrou instável
-    // (fora do ar por minutos seguidos); cachear uma falha faria o app nunca
-    // mais tentar de novo pra essa carta na mesma sessão.
-    if (meta.img) imgCache[key] = meta;
-    return meta;
-  } catch { return cardToMeta(null); }
+  }
 }
 
 // Aplica só os campos que a busca realmente trouxe. Nunca apaga uma imagem,

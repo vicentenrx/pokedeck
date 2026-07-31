@@ -56,3 +56,67 @@ function endDrag() {
 }
 document.addEventListener('pointerup', endDrag);
 document.addEventListener('pointercancel', endDrag);
+
+// ═══════════════════════════════════════════════════════════════
+// REORDENAR CARTAS NA GRADE (modo de ordenar)
+// ═══════════════════════════════════════════════════════════════
+// Só liga quando o toggle "Ordenar" (curEditMode) está ativo — arraste
+// livre o tempo todo seria fácil de disparar sem querer (ex: tentando só
+// rolar a lista). Diferente do arraste da sidebar (1D, compara só a
+// posição vertical), aqui é uma grade 2D — por isso usa elementFromPoint
+// pra achar o card embaixo do dedo, em vez de comparar coordenadas.
+// Reordena por card.id, não por posição visual, porque a grade pode estar
+// filtrada (busca/coleção/tenho-falta) — a posição na tela não bate com o
+// índice real em deck.cards nesse caso.
+let _cardDragEl = null, _cardDragStartX = 0, _cardDragStartY = 0;
+
+function initCardDragDrop() {
+  if (!curEditMode) return;
+  document.querySelectorAll('#card-grid .c-thumb').forEach(el => {
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      _cardDragEl = el;
+      _cardDragStartX = e.clientX;
+      _cardDragStartY = e.clientY;
+      el.setPointerCapture(e.pointerId);
+      el.classList.add('dragging');
+      // Sem isso, elementFromPoint (usado no pointermove) acha o próprio
+      // card arrastado embaixo do dedo — ele é que acabou de se mover pra
+      // lá — em vez do card que está por baixo de verdade.
+      el.style.pointerEvents = 'none';
+    });
+  });
+}
+
+document.addEventListener('pointermove', e => {
+  if (!_cardDragEl) return;
+  _cardDragEl.style.transform = `translate(${e.clientX - _cardDragStartX}px, ${e.clientY - _cardDragStartY}px)`;
+
+  const grid = $('card-grid');
+  grid.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
+  const under = document.elementFromPoint(e.clientX, e.clientY)?.closest('.c-thumb');
+  if (under && under !== _cardDragEl) under.classList.add('drag-over');
+});
+
+function endCardDrag() {
+  if (!_cardDragEl) return;
+  const grid = $('card-grid');
+  const target = grid.querySelector('.drag-over');
+  _cardDragEl.style.transform = '';
+  _cardDragEl.style.pointerEvents = '';
+  _cardDragEl.classList.remove('dragging');
+  grid.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
+  if (target) {
+    const deck = activeDeck();
+    const fromIdx = deck.cards.findIndex(c => c.id === _cardDragEl.dataset.cardId);
+    const toIdx   = deck.cards.findIndex(c => c.id === target.dataset.cardId);
+    if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+      const [item] = deck.cards.splice(fromIdx, 1);
+      deck.cards.splice(toIdx, 0, item);
+      save(); renderCards();
+    }
+  }
+  _cardDragEl = null;
+}
+document.addEventListener('pointerup', endCardDrag);
+document.addEventListener('pointercancel', endCardDrag);

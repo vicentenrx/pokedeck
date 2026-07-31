@@ -7,6 +7,15 @@
 .c-thumb.owned{border-color:var(--owned-bd);opacity:1;filter:none}
 .c-thumb.missing{opacity:.45;border-color:var(--g600);filter:brightness(.78) saturate(.65)}
 .c-thumb.missing:hover{opacity:.78;filter:brightness(.92) saturate(.85)}
+
+/* ── Modo de ordenar (arrastar pra reorganizar) ── */
+#card-grid.edit-mode .c-thumb{cursor:grab;touch-action:none;border-style:dashed;border-color:var(--red-border)}
+#card-grid.edit-mode .c-thumb:hover{transform:none;box-shadow:none}
+#card-grid.edit-mode .c-thumb .c-btn-group-left,
+#card-grid.edit-mode .c-thumb .c-del-btn,
+#card-grid.edit-mode .c-thumb .cq-btn{display:none}
+#card-grid.edit-mode .c-thumb.dragging{cursor:grabbing;opacity:.55;z-index:5;transition:none}
+#card-grid.edit-mode .c-thumb.drag-over{border-style:solid;border-color:var(--red);box-shadow:0 0 0 2px var(--red-light)}
 .c-img-wrap{position:relative;width:100%;aspect-ratio:.714;background:var(--g750);overflow:hidden;flex-shrink:0}
 .c-img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .35s}
 .c-img.loading{opacity:0}

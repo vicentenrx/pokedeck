@@ -295,6 +295,12 @@ $('set-filter').addEventListener('change', e => { curSet=e.target.value; renderC
 $('vt-grid').addEventListener('click', () => { viewMode='grid'; $('vt-grid').classList.add('active'); $('vt-list').classList.remove('active'); renderCards(); });
 $('vt-list').addEventListener('click', () => { viewMode='list'; $('vt-list').classList.add('active'); $('vt-grid').classList.remove('active'); renderCards(); });
 
+// Modo de ordenar (arrastar cartas na grade pra reorganizar)
+$('edit-order-toggle').addEventListener('change', e => {
+  curEditMode = e.target.checked;
+  renderCards();
+});
+
 // Logout (sidebar)
 $('sb-logout-btn').addEventListener('click', async () => {
   await signOut();

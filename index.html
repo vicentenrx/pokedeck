@@ -106,6 +106,7 @@
     <div class="sb-eyebrow">Pokémon TCG</div>
     <div class="sb-title">PokéDeck</div>
   </div>
+  <button id="btn-new-deck">+ Novo Deck</button>
   <div class="sb-lbl">Meus Decks</div>
   <div id="deck-list"></div>
   <div id="sb-account">
@@ -114,7 +115,6 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
     </button>
   </div>
-  <button id="btn-new-deck">+ Novo Deck</button>
 </div>
 
 <!-- MAIN -->
@@ -172,6 +172,11 @@
         <button class="vt active" id="vt-grid" title="Grade">⊞</button>
         <button class="vt" id="vt-list" title="Lista">☰</button>
       </div>
+      <label class="edit-toggle" title="Arrastar cartas pra reordenar (só na grade)">
+        <input type="checkbox" id="edit-order-toggle">
+        <span class="edit-toggle-track"><span class="edit-toggle-thumb"></span></span>
+        <span class="edit-toggle-lbl">Ordenar</span>
+      </label>
     </div>
     <div id="content">
       <div id="card-grid"></div>

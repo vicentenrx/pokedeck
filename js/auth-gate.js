@@ -70,7 +70,13 @@ $('ag-form-signin').addEventListener('submit', async e => {
     await signIn(email, password);
     await loadSb();
     await enterApp();
-    toast('Bem-vindo de volta!');
+    // _justConfirmedSignup só fica true quando esse login vem logo depois de
+    // um redirect de confirmação de cadastro (type=signup) — ou seja, é
+    // fisicamente o primeiro login de verdade dessa conta (sem confirmar,
+    // o Supabase recusa o login normal). Fora desse caso específico,
+    // "de volta" está sempre certo.
+    toast(_justConfirmedSignup ? 'Conta confirmada! Bem-vindo ao PokéDeck!' : 'Bem-vindo de volta!');
+    _justConfirmedSignup = false;
   } catch (err) {
     setAgError('ag-in-error', friendlyAuthError(err.message));
   } finally {
@@ -105,28 +111,58 @@ $('ag-form-signup').addEventListener('submit', async e => {
   }
 });
 
-// ── Recuperação de senha ──────────────────────────────────────
+// ── Redirect de e-mail (confirmação de cadastro / recuperação de senha) ──
 let _recoveryToken = null;
+let _justConfirmedSignup = false;
 
 // O Supabase manda o usuário de volta com os tokens no #fragmento da URL
-// (não em ?query), no formato "#access_token=...&type=recovery&...".
-function parseRecoveryHash() {
-  if (!location.hash.includes('type=recovery')) return null;
+// (não em ?query). type=recovery é "esqueci minha senha" (já tratado);
+// type=signup é a confirmação de e-mail do cadastro — e como a confirmação
+// de e-mail é obrigatória neste projeto (testado: login sem confirmar
+// retorna 400 "email_not_confirmed"), esse redirect é o único jeito de
+// alguém completar o primeiro login de verdade. Um link expirado ou já
+// usado volta como "#error=...&error_code=otp_expired", sem "type" —
+// precisa ser checado antes, senão cai no fallback errado.
+function parseAuthRedirectHash() {
+  if (!location.hash) return null;
   const params = new URLSearchParams(location.hash.slice(1));
+  if (params.get('error')) return { error: params.get('error_code') || params.get('error') };
+  const type = params.get('type');
   const access_token = params.get('access_token');
-  return access_token ? { access_token } : null;
+  if (!access_token || (type !== 'recovery' && type !== 'signup')) return null;
+  return { type, access_token };
 }
 
-// Chamado no boot (main.js) se o link do e-mail de recuperação trouxe o
-// usuário de volta pro app. Precisa vir antes de qualquer outra lógica de
-// sessão — esse token só serve pra trocar a senha, não é um login normal.
-function initRecoveryFlow() {
-  const recovery = parseRecoveryHash();
-  if (!recovery) return false;
-  _recoveryToken = recovery.access_token;
-  history.replaceState(null, '', location.pathname); // tira o token da URL visível
+// Chamado no boot (main.js), antes de qualquer outra lógica de sessão —
+// um desses tokens/erro tem prioridade sobre qualquer sessão salva.
+function initAuthRedirect() {
+  const result = parseAuthRedirectHash();
+  if (!result) return false;
+  history.replaceState(null, '', location.pathname); // tira o token/erro da URL visível
   $('auth-gate').classList.remove('hidden');
-  showAgView('ag-form-reset');
+
+  if (result.error) {
+    showAgView('ag-form-signin');
+    setAgError('ag-in-error', 'Esse link expirou ou já foi usado. Tente entrar normalmente, ou peça um novo link se for o caso.');
+    return true;
+  }
+
+  if (result.type === 'recovery') {
+    _recoveryToken = result.access_token;
+    showAgView('ag-form-reset');
+    return true;
+  }
+
+  // type === 'signup': não loga sozinho construindo uma sessão à mão (isso
+  // duplicaria o caminho de signIn() sem necessidade) — só pré-preenche o
+  // e-mail (via esse mesmo token, que já revalida no servidor) e marca que
+  // o próximo "Entrar" bem-sucedido é o primeiro de verdade dessa conta.
+  fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON_KEY, Authorization: `Bearer ${result.access_token}` } })
+    .then(r => r.ok ? r.json() : null)
+    .then(u => { if (u?.email) $('ag-in-email').value = u.email; })
+    .catch(() => {}); // não bloqueia o fluxo se falhar — só perde o preenchimento automático
+  _justConfirmedSignup = true;
+  showAgView('ag-form-signin');
   return true;
 }
 

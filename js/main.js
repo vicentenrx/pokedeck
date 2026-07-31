@@ -35,10 +35,9 @@ async function enterApp() {
 
 async function init() {
   loadLocal();
-  // Se o usuário veio do link do e-mail de "esqueci minha senha", isso tem
-  // prioridade sobre qualquer sessão salva — o token da URL só serve pra
-  // trocar a senha, não é uma sessão normal.
-  if (initRecoveryFlow()) return;
+  // Se o usuário veio de um link de e-mail (confirmar cadastro ou
+  // recuperar senha), isso tem prioridade sobre qualquer sessão salva.
+  if (initAuthRedirect()) return;
   // Não confia cegamente em qualquer objeto salvo em "session" — só entra
   // direto se ele tiver o formato esperado E a sessão ainda for válida
   // (refreshSessionIfNeeded zera "session" se o token não puder ser renovado).

@@ -132,6 +132,7 @@ function renderCards() {
   grid.innerHTML = ''; list.innerHTML = '';
   if (!cards.length) { empty.classList.remove('hidden'); grid.style.display='none'; list.style.display='none'; listHead.style.display='none'; return; }
   empty.classList.add('hidden');
+  grid.classList.toggle('edit-mode', curEditMode);
   if (viewMode==='grid') {
     grid.style.display='grid'; list.style.display='none'; listHead.style.display='none';
     cards.forEach(c => grid.appendChild(buildGridCard(c, deck.id)));
@@ -139,6 +140,7 @@ function renderCards() {
     grid.style.display='none'; list.style.display='block'; listHead.style.display='grid';
     cards.forEach(c => list.appendChild(buildListCard(c, deck.id)));
   }
+  initCardDragDrop();
 }
 
 function pkball(size=44) {
@@ -160,6 +162,7 @@ function buildGridCard(card, deckId) {
   const isPartial = card.owned > 0 && card.owned < card.qty;
   const el = document.createElement('div');
   el.className = 'c-thumb '+(isOwned?'owned':'missing');
+  el.dataset.cardId = card.id;
   el.innerHTML = `
     <div class="c-img-wrap">
       ${imgOrPH(card)}
@@ -183,6 +186,9 @@ function buildGridCard(card, deckId) {
       </div>
     </div>`;
   el.addEventListener('click', e => {
+    // Em modo de ordenar, o card inteiro é a área de arrastar — tocar não
+    // deveria marcar/desmarcar como possuída.
+    if (curEditMode) return;
     if (e.target.closest('.cq-btn')||e.target.closest('.c-del-btn')) return;
     toggleOwned(deckId, card.id); renderAll();
   });
