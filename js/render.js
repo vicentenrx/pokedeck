@@ -118,6 +118,7 @@ async function renderDeckValue(deck) {
 }
 
 function renderCards() {
+  finishCardDrag(); // um re-render inesperado no meio de um arraste (ex: preço chegou em segundo plano) comita e limpa antes de reconstruir a grade
   const deck  = activeDeck();
   const grid  = $('card-grid');
   const list  = $('card-list');

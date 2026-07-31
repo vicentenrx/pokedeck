@@ -106,7 +106,6 @@
     <div class="sb-eyebrow">Pokémon TCG</div>
     <div class="sb-title">PokéDeck</div>
   </div>
-  <button id="btn-new-deck">+ Novo Deck</button>
   <div class="sb-lbl">Meus Decks</div>
   <div id="deck-list"></div>
   <div id="sb-account">
@@ -115,6 +114,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
     </button>
   </div>
+  <button id="btn-new-deck">+ Novo Deck</button>
 </div>
 
 <!-- MAIN -->
@@ -276,8 +276,15 @@
 <div class="overlay hidden" id="m-edit-card">
   <div class="modal">
     <h2>Editar Carta</h2>
-    <p class="sub">Altere os dados da carta no deck.</p>
+    <p class="sub">Errou a carta ou a imagem veio errada? Busque de novo e escolha a impressão certa.</p>
     <input type="hidden" id="ec-id">
+    <div class="mf"><label>Buscar na API pra corrigir a imagem</label>
+      <div class="c-search-wrap">
+        <input class="mi" id="ec-search" placeholder="Digite o nome da carta..." autocomplete="off">
+        <div class="c-sugg hidden" id="ec-sugg"></div>
+      </div>
+    </div>
+    <div class="mf-divider">ou edite manualmente</div>
     <div class="mi-row">
       <div class="mf"><label>Nome</label><input class="mi" id="ec-name" maxlength="64" autocomplete="off"></div>
       <div class="mf narrow"><label>Qtd. no deck</label><input class="mi" id="ec-qty" type="number" min="1" max="4"></div>

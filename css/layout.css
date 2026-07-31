@@ -35,7 +35,7 @@
 .dk-del{background:none;border:none;color:var(--g500);font-size:13px;padding:4px 5px;border-radius:5px;
   transition:color .12s;flex-shrink:0;line-height:1}
 .dk-del:hover{color:var(--red)}
-#btn-new-deck{margin:12px 12px 4px;padding:12px;background:var(--red);border:none;
+#btn-new-deck{margin:10px 12px 12px;padding:12px;background:var(--red);border:none;
   border-radius:9px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;
   transition:all .15s;text-align:center;flex-shrink:0;box-shadow:0 2px 10px rgba(227,53,13,.32)}
 #btn-new-deck:hover{background:var(--red-dark);box-shadow:0 4px 16px rgba(227,53,13,.42);transform:translateY(-1px)}

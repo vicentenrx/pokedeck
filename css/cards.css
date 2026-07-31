@@ -9,13 +9,20 @@
 .c-thumb.missing:hover{opacity:.78;filter:brightness(.92) saturate(.85)}
 
 /* ── Modo de ordenar (arrastar pra reorganizar) ── */
-#card-grid.edit-mode .c-thumb{cursor:grab;touch-action:none;border-style:dashed;border-color:var(--red-border)}
+/* touch-action:pan-y (não "none") deixa a rolagem vertical funcionar
+   normalmente enquanto nenhuma carta está realmente sendo arrastada — só a
+   carta em si vira touch-action:none (via JS, em dragdrop.js) no momento
+   em que o arraste é armado. -webkit-touch-callout evita o menu nativo de
+   "salvar imagem" do Safari aparecer durante o toque longo. */
+#card-grid.edit-mode .c-thumb{cursor:grab;touch-action:pan-y;border-style:dashed;border-color:var(--red-border);
+  -webkit-touch-callout:none;user-select:none}
 #card-grid.edit-mode .c-thumb:hover{transform:none;box-shadow:none}
 #card-grid.edit-mode .c-thumb .c-btn-group-left,
 #card-grid.edit-mode .c-thumb .c-del-btn,
 #card-grid.edit-mode .c-thumb .cq-btn{display:none}
-#card-grid.edit-mode .c-thumb.dragging{cursor:grabbing;opacity:.55;z-index:5;transition:none}
-#card-grid.edit-mode .c-thumb.drag-over{border-style:solid;border-color:var(--red);box-shadow:0 0 0 2px var(--red-light)}
+#card-grid.edit-mode .c-thumb.dragging{cursor:grabbing;z-index:999;box-shadow:0 18px 34px rgba(0,0,0,.5);
+  transform:scale(1.045);transition:box-shadow .15s,transform .15s}
+.c-thumb-ghost{border:1.5px dashed var(--red-border);border-radius:12px;background:var(--red-light)}
 .c-img-wrap{position:relative;width:100%;aspect-ratio:.714;background:var(--g750);overflow:hidden;flex-shrink:0}
 .c-img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .35s}
 .c-img.loading{opacity:0}

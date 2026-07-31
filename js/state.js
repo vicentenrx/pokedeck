@@ -16,6 +16,8 @@ let searchTmr  = null;
 let curSet     = '';
 let pendingCardMeta = null; // metadados (preço/raridade/número) da sugestão de busca clicada
 let curEditMode = false; // "modo de ordenar": ativa o arraste livre das cartas na grade (ver dragdrop.js)
+let editSearchTmr = null;
+let pendingEditCardMeta = null; // metadados da sugestão clicada no modal Editar Carta
 
 // ═══════════════════════════════════════════════════════════════
 // PERSIST

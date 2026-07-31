@@ -60,63 +60,157 @@ document.addEventListener('pointercancel', endDrag);
 // ═══════════════════════════════════════════════════════════════
 // REORDENAR CARTAS NA GRADE (modo de ordenar)
 // ═══════════════════════════════════════════════════════════════
-// Só liga quando o toggle "Ordenar" (curEditMode) está ativo — arraste
-// livre o tempo todo seria fácil de disparar sem querer (ex: tentando só
-// rolar a lista). Diferente do arraste da sidebar (1D, compara só a
-// posição vertical), aqui é uma grade 2D — por isso usa elementFromPoint
-// pra achar o card embaixo do dedo, em vez de comparar coordenadas.
-// Reordena por card.id, não por posição visual, porque a grade pode estar
-// filtrada (busca/coleção/tenho-falta) — a posição na tela não bate com o
-// índice real em deck.cards nesse caso.
-let _cardDragEl = null, _cardDragStartX = 0, _cardDragStartY = 0;
+// Só liga quando o toggle "Ordenar" (curEditMode) está ativo. No touch, o
+// toque só vira arraste depois de segurar ~280ms sem mover muito — antes
+// disso o dedo ainda pode rolar a tela normalmente (touch-action:pan-y no
+// CSS permite isso; é o mesmo padrão do Google Keep / reorder do iOS). No
+// mouse não existe esse conflito com rolagem, então arma no primeiro
+// movimento (limiar bem pequeno, só pra não confundir com um clique).
+//
+// Enquanto arrasta, um placeholder tracejado (.c-thumb-ghost) marca o lugar
+// da carta e os outros cards são de fato reordenados no DOM conforme o
+// dedo/mouse passa por cima deles — animados com a técnica FLIP (mede a
+// posição antes de mover, move, anima a diferença) — funciona em qualquer
+// layout de grade sem precisar calcular linha/coluna manualmente. A carta
+// arrastada em si vira position:fixed e simplesmente segue o cursor.
+//
+// Reordena por card.id preservando os "slots" ocupados pela lista filtrada
+// dentro de deck.cards, porque a grade pode estar filtrada (busca/coleção/
+// tenho-falta) — a posição na tela não bate com o índice real nesse caso.
+const CARD_HOLD_MS = 280, CARD_MOVE_CANCEL_PX = 10, CARD_ARM_PX = 6;
+let _cardDown = null;                       // {el,id,pointerId,x,y,pointerType,timer} — antes de armar
+let _cardDragEl = null, _cardDragId = null; // depois de armar
+let _cardOffsetX = 0, _cardOffsetY = 0, _cardPlaceholder = null, _cardLastUnder = null;
 
 function initCardDragDrop() {
   if (!curEditMode) return;
   document.querySelectorAll('#card-grid .c-thumb').forEach(el => {
     el.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      _cardDragEl = el;
-      _cardDragStartX = e.clientX;
-      _cardDragStartY = e.clientY;
-      el.setPointerCapture(e.pointerId);
-      el.classList.add('dragging');
-      // Sem isso, elementFromPoint (usado no pointermove) acha o próprio
-      // card arrastado embaixo do dedo — ele é que acabou de se mover pra
-      // lá — em vez do card que está por baixo de verdade.
-      el.style.pointerEvents = 'none';
+      if (_cardDown || _cardDragEl) return;
+      const down = { el, id: el.dataset.cardId, pointerId: e.pointerId, x: e.clientX, y: e.clientY, pointerType: e.pointerType, timer: null };
+      _cardDown = down;
+      if (e.pointerType !== 'mouse') {
+        down.timer = setTimeout(() => { if (_cardDown === down) armCardDrag(down, down.x, down.y); }, CARD_HOLD_MS);
+      }
     });
   });
 }
 
+function armCardDrag(down, x, y) {
+  clearTimeout(down.timer);
+  _cardDown = null;
+  const el = down.el;
+  const rect = el.getBoundingClientRect();
+  try { el.setPointerCapture(down.pointerId); } catch {} // pode falhar se o ponteiro já não está mais ativo
+
+  _cardDragEl = el;
+  _cardDragId = down.id;
+  _cardOffsetX = x - rect.left;
+  _cardOffsetY = y - rect.top;
+  _cardLastUnder = null;
+
+  _cardPlaceholder = document.createElement('div');
+  _cardPlaceholder.className = 'c-thumb-ghost';
+  _cardPlaceholder.style.width  = rect.width + 'px';
+  _cardPlaceholder.style.height = rect.height + 'px';
+  el.parentNode.insertBefore(_cardPlaceholder, el);
+
+  el.style.position = 'fixed';
+  el.style.left   = rect.left + 'px';
+  el.style.top    = rect.top + 'px';
+  el.style.width  = rect.width + 'px';
+  el.style.height = rect.height + 'px';
+  el.style.pointerEvents = 'none'; // senão elementFromPoint acha a própria carta embaixo do cursor
+  el.style.touchAction = 'none';
+  el.classList.add('dragging');
+}
+
 document.addEventListener('pointermove', e => {
-  if (!_cardDragEl) return;
-  _cardDragEl.style.transform = `translate(${e.clientX - _cardDragStartX}px, ${e.clientY - _cardDragStartY}px)`;
-
-  const grid = $('card-grid');
-  grid.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
-  const under = document.elementFromPoint(e.clientX, e.clientY)?.closest('.c-thumb');
-  if (under && under !== _cardDragEl) under.classList.add('drag-over');
-});
-
-function endCardDrag() {
-  if (!_cardDragEl) return;
-  const grid = $('card-grid');
-  const target = grid.querySelector('.drag-over');
-  _cardDragEl.style.transform = '';
-  _cardDragEl.style.pointerEvents = '';
-  _cardDragEl.classList.remove('dragging');
-  grid.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
-  if (target) {
-    const deck = activeDeck();
-    const fromIdx = deck.cards.findIndex(c => c.id === _cardDragEl.dataset.cardId);
-    const toIdx   = deck.cards.findIndex(c => c.id === target.dataset.cardId);
-    if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
-      const [item] = deck.cards.splice(fromIdx, 1);
-      deck.cards.splice(toIdx, 0, item);
-      save(); renderCards();
+  if (_cardDown && !_cardDragEl) {
+    const dist = Math.hypot(e.clientX - _cardDown.x, e.clientY - _cardDown.y);
+    if (_cardDown.pointerType === 'mouse') {
+      if (dist > CARD_ARM_PX) armCardDrag(_cardDown, e.clientX, e.clientY);
+    } else if (dist > CARD_MOVE_CANCEL_PX) {
+      clearTimeout(_cardDown.timer);
+      _cardDown = null; // o gesto virou rolagem, não arraste
     }
   }
-  _cardDragEl = null;
+  if (!_cardDragEl) return;
+  e.preventDefault();
+  _cardDragEl.style.left = (e.clientX - _cardOffsetX) + 'px';
+  _cardDragEl.style.top  = (e.clientY - _cardOffsetY) + 'px';
+  updateCardFlipTarget(e.clientX, e.clientY);
+}, { passive: false });
+
+function updateCardFlipTarget(x, y) {
+  const grid = $('card-grid');
+  const under = document.elementFromPoint(x, y)?.closest('.c-thumb, .c-thumb-ghost');
+  if (!under || under === _cardDragEl || under === _cardPlaceholder || under === _cardLastUnder) return;
+  _cardLastUnder = under;
+
+  const rects = new Map();
+  grid.querySelectorAll('.c-thumb, .c-thumb-ghost').forEach(el => {
+    if (el !== _cardDragEl) rects.set(el, el.getBoundingClientRect());
+  });
+
+  const r = under.getBoundingClientRect();
+  const insertAfter = x > r.left + r.width / 2;
+  grid.insertBefore(_cardPlaceholder, insertAfter ? under.nextSibling : under);
+
+  rects.forEach((oldRect, el) => {
+    if (el === _cardPlaceholder) return;
+    const newRect = el.getBoundingClientRect();
+    const dx = oldRect.left - newRect.left, dy = oldRect.top - newRect.top;
+    if (!dx && !dy) return;
+    el.style.transition = 'none';
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    requestAnimationFrame(() => {
+      el.style.transition = 'transform .18s ease';
+      el.style.transform = '';
+    });
+  });
+}
+
+// Comita o arraste em andamento (se houver) contra a grade ATUAL e limpa o
+// estado, sem re-renderizar. Chamada tanto no soltar normal (endCardDrag)
+// quanto no início de renderCards() — porque um re-render pode chegar no
+// meio de um arraste por um motivo sem relação nenhuma (ex: uma busca de
+// preço em segundo plano que termina bem nesse instante) e destruiria a
+// grade por baixo do arraste em andamento se não comitarmos antes.
+function finishCardDrag() {
+  if (_cardDown) { clearTimeout(_cardDown.timer); _cardDown = null; }
+  if (!_cardDragEl) return false;
+  const grid = $('card-grid');
+  const deck = activeDeck();
+  const draggedId = _cardDragId;
+
+  if (deck) {
+    const visualIds = Array.from(grid.children)
+      .map(el => el === _cardDragEl ? null : (el === _cardPlaceholder ? draggedId : el.dataset.cardId))
+      .filter(Boolean);
+    const idSet = new Set(visualIds);
+    const slots = [];
+    deck.cards.forEach((c, i) => { if (idSet.has(c.id)) slots.push(i); });
+    const byId = new Map(deck.cards.map(c => [c.id, c]));
+    visualIds.forEach((id, k) => { deck.cards[slots[k]] = byId.get(id); });
+    save();
+  }
+
+  _cardPlaceholder?.remove();
+  _cardDragEl.style.position = '';
+  _cardDragEl.style.left = '';
+  _cardDragEl.style.top = '';
+  _cardDragEl.style.width = '';
+  _cardDragEl.style.height = '';
+  _cardDragEl.style.pointerEvents = '';
+  _cardDragEl.style.touchAction = '';
+  _cardDragEl.classList.remove('dragging');
+
+  _cardDragEl = null; _cardDragId = null; _cardPlaceholder = null; _cardLastUnder = null;
+  return true;
+}
+function endCardDrag() {
+  if (finishCardDrag()) renderCards();
 }
 document.addEventListener('pointerup', endCardDrag);
 document.addEventListener('pointercancel', endCardDrag);

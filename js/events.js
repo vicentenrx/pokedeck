@@ -36,26 +36,92 @@ function openEditCard(deckId, cardId) {
   $('ec-qty').value   = card.qty;
   $('ec-qty').max     = card.type === 'Energia' ? 60 : 4;
   $('ec-type').value  = card.type;
+  $('ec-search').value = '';
+  pendingEditCardMeta = null;
+  hideEcSugg();
   openModal('m-edit-card');
-  setTimeout(() => $('ec-name').focus(), 60);
 }
 
 $('ec-type').addEventListener('change', () => {
   $('ec-qty').max = $('ec-type').value === 'Energia' ? 60 : 4;
 });
 $('m-edit-card-cancel').addEventListener('click', () => closeModal('m-edit-card'));
-$('m-edit-card-save').addEventListener('click', () => {
+
+// Busca de correção — mesmo padrão do Adicionar Carta (autocomplete na API).
+// Escolher uma sugestão aqui já resolve o "gostaria de ajeitar manualmente":
+// grava a impressão exata (imagem/preço/raridade) na hora, sem depender de
+// a busca por nome+coleção calhar de achar a carta certa sozinha.
+function showEcSugg() {
+  $('ec-sugg').classList.remove('hidden');
+  $('ec-sugg').closest('.mf').style.marginBottom = '244px';
+}
+function hideEcSugg() {
+  $('ec-sugg').classList.add('hidden');
+  $('ec-sugg').closest('.mf').style.marginBottom = '';
+}
+$('ec-search').addEventListener('input', () => {
+  clearTimeout(editSearchTmr);
+  pendingEditCardMeta = null;
+  const q = $('ec-search').value.trim();
+  const sugg = $('ec-sugg');
+  if (q.length < 2) { hideEcSugg(); return; }
+  sugg.innerHTML = '<div class="cs-load">Buscando...</div>';
+  showEcSugg();
+  editSearchTmr = setTimeout(async () => {
+    const results = await apiSearch(q, 20);
+    if (results === null) { sugg.innerHTML='<div class="cs-load">Não conseguimos buscar agora — a API do Pokémon TCG está instável. Tente de novo em instantes.</div>'; return; }
+    if (!results.length) { sugg.innerHTML='<div class="cs-load">Nenhuma carta encontrada.</div>'; return; }
+    sugg.innerHTML = '';
+    results.forEach(card => {
+      const img = card.images?.small || '';
+      const item = document.createElement('div');
+      item.className = 'cs-item';
+      item.innerHTML = img
+        ? `<img class="cs-th" src="${esc(img)}" alt="${esc(card.name)}">`
+        : `<div class="cs-th" style="display:flex;align-items:center;justify-content:center;font-size:18px">🃏</div>`;
+      item.innerHTML += `<div class="cs-info"><div class="cs-n">${esc(card.name)}</div><div class="cs-s">${esc(card.set?.name||'')} ${esc(card.number||'')}</div></div>`;
+      item.addEventListener('click', () => {
+        $('ec-name').value   = card.name;
+        $('ec-set').value    = (card.set?.ptcgoCode||card.set?.id||'') + ' ' + (card.number||'');
+        $('ec-type').value   = apiType(card.supertype||'');
+        $('ec-search').value = card.name;
+        pendingEditCardMeta  = cardToMeta(card); // consumido em m-edit-card-save
+        hideEcSugg();
+      });
+      sugg.appendChild(item);
+    });
+  }, 350);
+});
+document.addEventListener('click', e => { if (!e.target.closest('#m-edit-card')) hideEcSugg(); });
+
+$('m-edit-card-save').addEventListener('click', async () => {
   const deck = activeDeck();
   const card = deck?.cards.find(c=>c.id===$('ec-id').value);
   if (!card) return;
+  const origName = card.name, origSet = card.set;
   const max    = $('ec-type').value === 'Energia' ? 60 : 4;
   card.name    = $('ec-name').value.trim() || card.name;
   card.set     = $('ec-set').value.trim();
   card.type    = $('ec-type').value;
   card.qty     = Math.max(1, Math.min(max, parseInt($('ec-qty').value)||1));
   if (card.owned > card.qty) card.owned = card.qty;
+
+  const usedSuggestion = !!pendingEditCardMeta;
+  if (usedSuggestion) {
+    applyCardMeta(card, pendingEditCardMeta);
+    card.priceUpdatedAt = new Date().toISOString();
+    pendingEditCardMeta = null;
+  }
   save(); closeModal('m-edit-card'); renderAll();
   toast('Carta atualizada!');
+
+  if (!usedSuggestion && (card.name !== origName || card.set !== origSet)) {
+    // Editou nome/coleção manualmente (sem escolher sugestão): tenta achar a imagem certa em segundo plano.
+    const meta = await fetchCardMeta(card.name, card.set);
+    applyCardMeta(card, meta);
+    if (meta.img) card.priceUpdatedAt = new Date().toISOString();
+    save(); renderAll();
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════
