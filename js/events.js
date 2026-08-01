@@ -192,20 +192,28 @@ $('btn-export-mobile').addEventListener('click', () => $('btn-export').click());
 
 // Popula um <select> de coleções (mais recente primeiro), usado tanto no
 // Adicionar Carta quanto no Editar Carta — cada um busca só uma vez (fica
-// vazio de novo só se a página recarregar).
+// vazio de novo só se a página recarregar). Tenta 3x: sem retry, um único
+// 500 (a API já se mostrou instável a esse ponto) deixava o dropdown preso
+// pra sempre em só "Todas as coleções", parecendo que a função tinha sumido.
 async function populateSetFilter(sel) {
   if (sel.options.length > 1) return;
-  try {
-    const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250&orderBy=-releaseDate`, 10000);
-    const d   = await res.json();
-    (d.data || []).forEach(s => {
-      if (!s.ptcgoCode) return;
-      const opt = document.createElement('option');
-      opt.value       = s.ptcgoCode;
-      opt.textContent = `${s.name} (${s.ptcgoCode})`;
-      sel.appendChild(opt);
-    });
-  } catch {}
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250&orderBy=-releaseDate`, 10000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      (d.data || []).forEach(s => {
+        if (!s.ptcgoCode) return;
+        const opt = document.createElement('option');
+        opt.value       = s.ptcgoCode;
+        opt.textContent = `${s.name} (${s.ptcgoCode})`;
+        sel.appendChild(opt);
+      });
+      return;
+    } catch (err) {
+      if (attempt === 3) console.warn('[ptcg] populateSetFilter falhou 3x:', err);
+    }
+  }
 }
 
 $('btn-add-card').addEventListener('click', async () => {
@@ -327,6 +335,44 @@ $('m-import-save').addEventListener('click', async () => {
   }
   save(); renderAll();
   if (fetched>0) toast(`✓ ${fetched} imagens carregadas!`);
+});
+
+// Buscar de novo imagens que faltam — a API do Pokémon TCG é instável o
+// bastante pra uma importação inteira ficar sem foto numa hora ruim; esse
+// botão deixa tentar de novo depois, sem precisar reimportar ou editar
+// carta por carta. Sempre olha o deck inteiro (deck.cards), não só o que
+// está visível no filtro/busca atual.
+let retryingImages = false;
+function updateRetryImagesButton(deck) {
+  if (retryingImages) return; // não mexe no estado enquanto uma busca em massa já está rodando
+  const missing = deck.cards.filter(c => !c.img).length;
+  $('retry-images-count').textContent = missing ? ` (${missing})` : '';
+  $('btn-retry-images').disabled = missing === 0;
+}
+$('btn-retry-images').addEventListener('click', async () => {
+  const deck = activeDeck();
+  const missing = deck?.cards.filter(c => !c.img) || [];
+  if (!missing.length) return;
+  retryingImages = true;
+  const btn = $('btn-retry-images');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  toast(`Buscando imagem de ${missing.length} carta${missing.length!==1?'s':''}...`);
+  let found = 0, checked = 0;
+  for (const card of missing) {
+    const meta = await fetchCardMeta(card.name, card.set);
+    checked++;
+    if (meta.img) {
+      const c = deck.cards.find(x=>x.id===card.id);
+      if (c) { applyCardMeta(c, meta); c.priceUpdatedAt = new Date().toISOString(); found++; }
+    }
+    if (checked%4===0) { save(); renderAll(); }
+  }
+  save();
+  retryingImages = false;
+  btn.classList.remove('loading');
+  renderAll();
+  toast(found ? `✓ ${found} imagem${found!==1?'s':''} encontrada${found!==1?'s':''}!` : 'Nenhuma imagem encontrada dessa vez — tente de novo mais tarde.');
 });
 
 // Export

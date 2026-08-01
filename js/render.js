@@ -125,6 +125,7 @@ function renderCards() {
   const listHead = $('card-list-head');
   const empty = $('empty-st');
   if (!deck) return;
+  updateRetryImagesButton(deck);
   let cards = deck.cards;
   if (curFilter==='owned')   cards = cards.filter(c => c.owned>=c.qty);
   if (curFilter==='missing') cards = cards.filter(c => c.owned<c.qty);
