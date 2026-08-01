@@ -91,13 +91,22 @@ async function fetchCardMeta(name, setCode='') {
   let q = `name:"${name.trim()}"`;
   if (setCode) {
     const parts = setCode.trim().split(/\s+/);
-    const num = parts[parts.length-1];
+    const num  = parts[parts.length-1];
+    const code = parts.length > 1 ? parts.slice(0,-1).join(' ') : '';
     // Exige pelo menos um dígito (ex: "125", "TG05", "SWSH001", "125a") — não
     // basta ser "uma palavra qualquer". Sem isso, uma coleção escrita por
     // extenso (ex: "Obsidian Flames", vinda de uma lista importada com o
     // nome da coleção entre parênteses em vez do código) faria a busca
     // filtrar por "number:Flames", que não existe, e a carta nunca era achada.
     if (/^[A-Za-z]{0,4}\d+[A-Za-z]?$/.test(num)) q += ` number:${num}`;
+    // Sem isso, "Riolu" + "MEG 76" virava só "number:76" — qualquer Riolu
+    // (ou qualquer carta) numerada 76 em QUALQUER coleção batia, não
+    // necessariamente a de MEG. É por isso que editar manualmente pra um
+    // número que existe em mais de uma coleção podia trazer a carta errada
+    // mesmo com a coleção certa digitada. Só aplica quando "code" parece
+    // mesmo um código curto (ex: "MEG", "OBF") — não um nome de coleção por
+    // extenso tipo "Obsidian Flames", que não teria sentido como filtro.
+    if (/^[A-Za-z0-9]{2,8}$/.test(code)) q += ` set.ptcgoCode:${code}`;
   }
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
