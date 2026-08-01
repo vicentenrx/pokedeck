@@ -92,7 +92,12 @@ async function fetchCardMeta(name, setCode='') {
   if (setCode) {
     const parts = setCode.trim().split(/\s+/);
     const num = parts[parts.length-1];
-    if (/^\w+$/.test(num)) q += ` number:${num}`;
+    // Exige pelo menos um dígito (ex: "125", "TG05", "SWSH001", "125a") — não
+    // basta ser "uma palavra qualquer". Sem isso, uma coleção escrita por
+    // extenso (ex: "Obsidian Flames", vinda de uma lista importada com o
+    // nome da coleção entre parênteses em vez do código) faria a busca
+    // filtrar por "number:Flames", que não existe, e a carta nunca era achada.
+    if (/^[A-Za-z]{0,4}\d+[A-Za-z]?$/.test(num)) q += ` number:${num}`;
   }
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {

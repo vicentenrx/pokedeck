@@ -145,16 +145,24 @@ document.addEventListener('pointermove', e => {
 function updateCardFlipTarget(x, y) {
   const grid = $('card-grid');
   const under = document.elementFromPoint(x, y)?.closest('.c-thumb, .c-thumb-ghost');
-  if (!under || under === _cardDragEl || under === _cardPlaceholder || under === _cardLastUnder) return;
-  _cardLastUnder = under;
+  if (!under || under === _cardDragEl || under === _cardPlaceholder) return;
+
+  const r = under.getBoundingClientRect();
+  const insertAfter = x > r.left + r.width / 2;
+  // A chave inclui o lado (antes/depois), não só o card — senão, depois de
+  // mover o placeholder pra depois de um card, voltar o dedo pra cima do
+  // mesmo card (agora do lado esquerdo dele) não recalculava nada, porque
+  // "under" não tinha mudado. Isso travava o arraste bem nas pontas: dava
+  // pra mover pra direita mas não pra voltar pra esquerda sobre o mesmo card.
+  const key = under.dataset.cardId + ':' + (insertAfter ? 'a' : 'b');
+  if (key === _cardLastUnder) return;
+  _cardLastUnder = key;
 
   const rects = new Map();
   grid.querySelectorAll('.c-thumb, .c-thumb-ghost').forEach(el => {
     if (el !== _cardDragEl) rects.set(el, el.getBoundingClientRect());
   });
 
-  const r = under.getBoundingClientRect();
-  const insertAfter = x > r.left + r.width / 2;
   grid.insertBefore(_cardPlaceholder, insertAfter ? under.nextSibling : under);
 
   rects.forEach((oldRect, el) => {

@@ -37,9 +37,11 @@ function openEditCard(deckId, cardId) {
   $('ec-qty').max     = card.type === 'Energia' ? 60 : 4;
   $('ec-type').value  = card.type;
   $('ec-search').value = '';
+  $('ec-set-filter').value = '';
   pendingEditCardMeta = null;
   hideEcSugg();
   openModal('m-edit-card');
+  populateSetFilter($('ec-set-filter'));
 }
 
 $('ec-type').addEventListener('change', () => {
@@ -68,7 +70,7 @@ $('ec-search').addEventListener('input', () => {
   sugg.innerHTML = '<div class="cs-load">Buscando...</div>';
   showEcSugg();
   editSearchTmr = setTimeout(async () => {
-    const results = await apiSearch(q, 20);
+    const results = await apiSearch(q, 20, $('ec-set-filter').value);
     if (results === null) { sugg.innerHTML='<div class="cs-load">Não conseguimos buscar agora — a API do Pokémon TCG está instável. Tente de novo em instantes.</div>'; return; }
     if (!results.length) { sugg.innerHTML='<div class="cs-load">Nenhuma carta encontrada.</div>'; return; }
     sugg.innerHTML = '';
@@ -188,6 +190,24 @@ $('btn-add-card-fab').addEventListener('click', () => $('btn-add-card').click())
 $('btn-import-mobile').addEventListener('click', () => $('btn-import').click());
 $('btn-export-mobile').addEventListener('click', () => $('btn-export').click());
 
+// Popula um <select> de coleções (mais recente primeiro), usado tanto no
+// Adicionar Carta quanto no Editar Carta — cada um busca só uma vez (fica
+// vazio de novo só se a página recarregar).
+async function populateSetFilter(sel) {
+  if (sel.options.length > 1) return;
+  try {
+    const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250&orderBy=-releaseDate`, 10000);
+    const d   = await res.json();
+    (d.data || []).forEach(s => {
+      if (!s.ptcgoCode) return;
+      const opt = document.createElement('option');
+      opt.value       = s.ptcgoCode;
+      opt.textContent = `${s.name} (${s.ptcgoCode})`;
+      sel.appendChild(opt);
+    });
+  } catch {}
+}
+
 $('btn-add-card').addEventListener('click', async () => {
   $('c-search').value=''; $('c-name').value=''; $('c-set').value='';
   $('c-qty').value='1'; $('c-type').value='Pokémon'; $('c-img').value='';
@@ -201,21 +221,7 @@ $('btn-add-card').addEventListener('click', async () => {
     const isEnergy = $('c-type').value === 'Energia';
     $('c-qty').max = isEnergy ? 60 : 4;
   });
-  // Popula sets se ainda não carregou
-  const sel = $('api-set-filter');
-  if (sel.options.length <= 1) {
-    try {
-      const res = await ptcgFetch(`${PTCG}/sets?select=name,ptcgoCode&pageSize=250&orderBy=-releaseDate`, 10000);
-      const d   = await res.json();
-      (d.data || []).forEach(s => {
-        if (!s.ptcgoCode) return;
-        const opt = document.createElement('option');
-        opt.value       = s.ptcgoCode;
-        opt.textContent = `${s.name} (${s.ptcgoCode})`;
-        sel.appendChild(opt);
-      });
-    } catch {}
-  }
+  await populateSetFilter($('api-set-filter'));
 });
 $('m-card-cancel').addEventListener('click', () => closeModal('m-card'));
 

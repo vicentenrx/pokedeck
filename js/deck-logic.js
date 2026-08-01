@@ -54,12 +54,34 @@ function parseDeckList(text) {
   return text.split('\n').reduce((acc, raw) => {
     const line = raw.trim();
     if (!line || /^(\*{2,}|Pokémon|Pokemon|Trainer|Energy|Treinador|Energia|Total Cards|##|\/\/)/.test(line)) return acc;
-    const m = line.match(/^(\d+)\s+(.+?)(?:\s+([A-Z0-9]{2,8})\s+([\w-]+))?$/);
-    if (!m) return acc;
-    const name = m[2].trim();
+
+    // Aceita "4 Nome" e "4x Nome" — listas escritas à mão (ex: legenda de
+    // vídeo do YouTube) costumam usar "4x", diferente do formato de
+    // exportação do PTCG Live/Liga Pokémon que essa função também lê.
+    const qm = line.match(/^(\d+)\s*[xX]?\s+(.+)$/);
+    if (!qm) return acc;
+    let rest = qm[2].trim();
+
+    // Coleção entre parênteses — "Charizard ex (OBF 125)" ou só "(Obsidian
+    // Flames)" — bem comum em listas feitas pra leitura humana, diferente
+    // do "CÓDIGO NÚMERO" solto no fim que o formato de exportação usa. Sem
+    // isso, o texto inteiro dentro do parêntese ia grudar no nome da carta
+    // e a busca por imagem nunca achava nada (nome não bate com nenhuma
+    // carta real).
+    let set = '';
+    const paren = rest.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+    if (paren) {
+      rest = paren[1].trim();
+      set  = paren[2].trim();
+    } else {
+      const suffix = rest.match(/^(.+?)\s+([A-Za-z0-9]{2,8})\s+([\w-]+)$/);
+      if (suffix) { rest = suffix[1].trim(); set = `${suffix[2].toUpperCase()} ${suffix[3]}`; }
+    }
+
+    const name = rest;
+    if (!name) return acc;
     const type = guessType(name);
-    const qty  = Math.max(1, Math.min(type === 'Energia' ? 60 : 4, parseInt(m[1],10)));
-    const set  = m[3] && m[4] ? `${m[3]} ${m[4]}` : '';
+    const qty  = Math.max(1, Math.min(type === 'Energia' ? 60 : 4, parseInt(qm[1],10)));
     acc.push({ name, set, qty, type });
     return acc;
   }, []);

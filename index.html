@@ -279,6 +279,11 @@
     <p class="sub">Errou a carta ou a imagem veio errada? Busque de novo e escolha a impressão certa.</p>
     <input type="hidden" id="ec-id">
     <div class="mf"><label>Buscar na API pra corrigir a imagem</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select class="mi" id="ec-set-filter" style="max-width:210px">
+          <option value="">Todas as coleções</option>
+        </select>
+      </div>
       <div class="c-search-wrap">
         <input class="mi" id="ec-search" placeholder="Digite o nome da carta..." autocomplete="off">
         <div class="c-sugg hidden" id="ec-sugg"></div>
