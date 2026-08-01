@@ -50,6 +50,18 @@ function exportListLiga(deck) {
 // Pokémon — as linhas de carta são iguais nos dois ("QTD Nome CÓDIGO NÚMERO");
 // só os cabeçalhos de seção mudam ("Pokémon" vs "Pokemons - 20"), e ambos já
 // caem no filtro de cabeçalho abaixo por começarem com o mesmo prefixo.
+// O Pokémon TCG Live exporta energia básica como "Basic {M} Energy" (o
+// símbolo do tipo entre chaves) em vez do nome real da carta — "Basic {M}
+// Energy" não é o nome de nenhuma carta de verdade, então a busca de
+// imagem nunca achava nada pra essa linha (e ela sempre existe: toda
+// lista do PTCG Live tem energia básica).
+const ENERGY_SYMBOLS = { G:'Grass', R:'Fire', W:'Water', L:'Lightning', P:'Psychic', F:'Fighting', D:'Darkness', M:'Metal', Y:'Fairy', C:'Colorless', N:'Dragon' };
+function resolveEnergySymbol(name) {
+  const m = name.match(/^Basic\s*\{([A-Za-z])\}\s*Energy$/i);
+  const real = m && ENERGY_SYMBOLS[m[1].toUpperCase()];
+  return real ? `${real} Energy` : name;
+}
+
 function parseDeckList(text) {
   return text.split('\n').reduce((acc, raw) => {
     const line = raw.trim();
@@ -78,7 +90,7 @@ function parseDeckList(text) {
       if (suffix) { rest = suffix[1].trim(); set = `${suffix[2].toUpperCase()} ${suffix[3]}`; }
     }
 
-    const name = rest;
+    const name = resolveEnergySymbol(rest);
     if (!name) return acc;
     const type = guessType(name);
     const qty  = Math.max(1, Math.min(type === 'Energia' ? 60 : 4, parseInt(qm[1],10)));

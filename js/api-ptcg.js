@@ -149,7 +149,10 @@ function apiType(supertype) {
 
 function guessType(name) {
   const l = name.toLowerCase();
-  if (/\benergy\b/.test(l)) return 'Energia';
+  // Termina em "energy" (ex: "Fire Energy", "Double Turbo Energy") — não
+  // basta *conter* a palavra, senão cartas de Treinador com "Energy" no
+  // nome (ex: "Energy Recycler", "Energy Switch") viravam Energia errado.
+  if (/\benergy$/.test(l)) return 'Energia';
   if (/professor|research|boss.?s order|arven|iono|colress|marnie|judge|hop|nanu|\bball\b|rare candy|switch|escape rope|potion|town|path|stadium|gate|nest|quick|ultra|great|level|heavy|master|premier|friend|counter|pal pad|tool\b|item\b|supporter/.test(l)) return 'Treinador';
   return 'Pokémon';
 }
