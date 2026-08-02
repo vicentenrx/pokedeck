@@ -53,8 +53,12 @@ function endDrag(e) {
   if (target) {
     const to = parseInt(target.dataset.idx, 10);
     if (to !== _dragFrom) {
+      // to é o índice do alvo ANTES da remoção; se o alvo vem depois da
+      // origem, remover a origem desloca o alvo (e tudo entre eles) uma
+      // posição pra trás, então compensa com -1 pra cair certinho antes dele.
+      const insertAt = to > _dragFrom ? to - 1 : to;
       const [item] = state.decks.splice(_dragFrom, 1);
-      state.decks.splice(to, 0, item);
+      state.decks.splice(insertAt, 0, item);
       save(); renderSidebar();
     }
   }
