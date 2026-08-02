@@ -36,15 +36,38 @@ async function searchLocalCards(q, limit=20, setCode='') {
   } catch { return []; }
 }
 
+// Extrai número e código da coleção de um setCode no formato "CÓDIGO NÚMERO"
+// (ex: "MEG 76"), cada um já validado — volta vazio se não bater no formato
+// esperado, quem chama só usa o que veio preenchido.
+function parseSetCode(setCode) {
+  const parts = setCode.trim().split(/\s+/);
+  const num  = parts[parts.length-1];
+  const code = parts.length > 1 ? parts.slice(0,-1).join(' ') : '';
+  return {
+    // Exige pelo menos um dígito (ex: "125", "TG05", "SWSH001", "125a") — não
+    // basta ser "uma palavra qualquer". Sem isso, uma coleção escrita por
+    // extenso (ex: "Obsidian Flames", vinda de uma lista importada com o
+    // nome da coleção entre parênteses em vez do código) faria a busca
+    // filtrar por "number:Flames", que não existe, e a carta nunca era achada.
+    num: /^[A-Za-z]{0,4}\d+[A-Za-z]?$/.test(num) ? num : '',
+    // Sem isso, "Riolu" + "MEG 76" virava só "number:76" — qualquer Riolu
+    // (ou qualquer carta) numerada 76 em QUALQUER coleção batia, não
+    // necessariamente a de MEG. É por isso que editar manualmente pra um
+    // número que existe em mais de uma coleção podia trazer a carta errada
+    // mesmo com a coleção certa digitada. Só aplica quando "code" parece
+    // mesmo um código curto (ex: "MEG", "OBF") — não um nome de coleção por
+    // extenso tipo "Obsidian Flames", que não teria sentido como filtro.
+    code: /^[A-Za-z0-9]{2,8}$/.test(code) ? code : '',
+  };
+}
+
 async function fetchLocalCardMeta(name, setCode='') {
   let url = `${SB_URL}/rest/v1/ptcg_cards?select=number,rarity,supertype,image_small,image_large`
     + `&name=ilike.${encodeURIComponent(name.trim())}&order=id&limit=1`;
   if (setCode) {
-    const parts = setCode.trim().split(/\s+/);
-    const num  = parts[parts.length-1];
-    const code = parts.length > 1 ? parts.slice(0,-1).join(' ') : '';
-    if (/^[A-Za-z]{0,4}\d+[A-Za-z]?$/.test(num))  url += `&number=eq.${encodeURIComponent(num)}`;
-    if (/^[A-Za-z0-9]{2,8}$/.test(code)) url += `&set_code=eq.${encodeURIComponent(code)}`;
+    const { num, code } = parseSetCode(setCode);
+    if (num)  url += `&number=eq.${encodeURIComponent(num)}`;
+    if (code) url += `&set_code=eq.${encodeURIComponent(code)}`;
   }
   try {
     const res = await fetch(url, { headers: { apikey: SB_ANON_KEY, Authorization: `Bearer ${SB_ANON_KEY}` } });
@@ -155,23 +178,9 @@ async function fetchRemoteCardMeta(name, setCode='') {
   if (imgCache[key] !== undefined) return imgCache[key];
   let q = `name:"${name.trim()}"`;
   if (setCode) {
-    const parts = setCode.trim().split(/\s+/);
-    const num  = parts[parts.length-1];
-    const code = parts.length > 1 ? parts.slice(0,-1).join(' ') : '';
-    // Exige pelo menos um dígito (ex: "125", "TG05", "SWSH001", "125a") — não
-    // basta ser "uma palavra qualquer". Sem isso, uma coleção escrita por
-    // extenso (ex: "Obsidian Flames", vinda de uma lista importada com o
-    // nome da coleção entre parênteses em vez do código) faria a busca
-    // filtrar por "number:Flames", que não existe, e a carta nunca era achada.
-    if (/^[A-Za-z]{0,4}\d+[A-Za-z]?$/.test(num)) q += ` number:${num}`;
-    // Sem isso, "Riolu" + "MEG 76" virava só "number:76" — qualquer Riolu
-    // (ou qualquer carta) numerada 76 em QUALQUER coleção batia, não
-    // necessariamente a de MEG. É por isso que editar manualmente pra um
-    // número que existe em mais de uma coleção podia trazer a carta errada
-    // mesmo com a coleção certa digitada. Só aplica quando "code" parece
-    // mesmo um código curto (ex: "MEG", "OBF") — não um nome de coleção por
-    // extenso tipo "Obsidian Flames", que não teria sentido como filtro.
-    if (/^[A-Za-z0-9]{2,8}$/.test(code)) q += ` set.ptcgoCode:${code}`;
+    const { num, code } = parseSetCode(setCode);
+    if (num)  q += ` number:${num}`;
+    if (code) q += ` set.ptcgoCode:${code}`;
   }
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
