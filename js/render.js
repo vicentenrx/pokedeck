@@ -90,7 +90,17 @@ function renderTopbar() {
 // Soma o preço de cada carta (convertido pra BRL, ajustado pela condição) vezes
 // a quantidade no deck. Cartas sem preço nenhum são ignoradas na soma, mas
 // contam pro aviso "*" de que o total é parcial.
+//
+// renderTopbar() chama isso a cada mutação de carta (toggle owned, ajustar
+// qty), e o cálculo é assíncrono (espera cotação de câmbio). Mutar várias
+// cartas em sequência rápida dispara várias chamadas sobrepostas pro MESMO
+// deck ativo — a guarda de "deck trocou" sozinha não impede uma chamada mais
+// ANTIGA de terminar depois de uma mais nova e sobrescrever o total com um
+// valor desatualizado. _deckValueGen resolve isso: só a chamada mais recente
+// (gen === _deckValueGen) pode escrever no DOM.
+let _deckValueGen = 0;
 async function renderDeckValue(deck) {
+  const gen = ++_deckValueGen;
   const chip = $('s-value-chip');
   const sep  = $('s-value-sep');
   const el   = $('s-value');
@@ -107,10 +117,15 @@ async function renderDeckValue(deck) {
       const rate = await getRateToBrl('EUR');
       if (rate) brl = c.priceEur * rate;
     }
-    if (activeDeck()?.id !== deck.id) return; // usuário trocou de deck durante o cálculo
+    // Aborta se o deck ativo mudou OU se uma chamada mais nova pra este
+    // mesmo deck já começou (gen ficou pra trás) — nos dois casos essa
+    // chamada está obsoleta e nem vale a pena continuar gastando fetch de
+    // câmbio pras próximas cartas.
+    if (activeDeck()?.id !== deck.id || gen !== _deckValueGen) return;
     if (brl != null) total += brl * (CONDITION_MULT[c.condition] ?? 1) * c.qty;
     else missing++;
   }
+  if (activeDeck()?.id !== deck.id || gen !== _deckValueGen) return; // idem, agora antes de escrever o resultado final
   el.textContent = formatBrl(total) + (missing ? ' *' : '');
   chip.title = missing
     ? `Valor estimado — ${missing} carta${missing!==1?'s':''} sem preço disponível não entra${missing!==1?'m':''} na soma`
@@ -143,6 +158,71 @@ function renderCards() {
     cards.forEach(c => list.appendChild(buildListCard(c, deck.id)));
   }
   initCardDragDrop();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ATUALIZAÇÃO INCREMENTAL (toggle owned / ajustar qty)
+// ═══════════════════════════════════════════════════════════════
+// toggleOwned/adjustOwned mudam só UMA carta; recriar a grade inteira
+// (renderCards()) a cada clique fica caro num deck de 60 cartas. Esse
+// caminho atualiza só o elemento já existente. Só é seguro quando a carta
+// continua no conjunto que o filtro atual mostra — curSearch/curSet não
+// mudam com owned/qty, mas curFilter 'owned'/'missing' pode fazer a carta
+// sair ou entrar do conjunto visível, e aí só o renderCards() completo sabe
+// inserir/remover o nó certinho.
+function cardPassesFilter(card) {
+  if (curFilter==='owned'   && card.owned<card.qty)  return false;
+  if (curFilter==='missing' && card.owned>=card.qty) return false;
+  return true;
+}
+
+function updateCardInPlace(deckId, cardId) {
+  const deck = state.decks.find(d => d.id===deckId);
+  const card = deck?.cards.find(c => c.id===cardId);
+  if (!deck || !card || !cardPassesFilter(card)) { renderCards(); return; }
+  const container = viewMode==='grid' ? $('card-grid') : $('card-list');
+  const el = [...container.children].find(x => x.dataset.cardId===cardId);
+  if (!el) { renderCards(); return; } // não deveria acontecer, mas por segurança cai pro caminho completo
+  if (viewMode==='grid') updateGridCardVisual(el, card);
+  else                   updateListCardVisual(el, card);
+}
+
+function updateGridCardVisual(el, card) {
+  const isOwned   = card.owned >= card.qty;
+  const isPartial = card.owned > 0 && card.owned < card.qty;
+  el.className = 'c-thumb '+(isOwned?'owned':'missing');
+  let part = el.querySelector('.c-part');
+  if (isPartial) {
+    if (!part) {
+      part = document.createElement('div');
+      part.className = 'c-part';
+      el.querySelector('.c-img-wrap').appendChild(part);
+    }
+    part.textContent = `${card.owned}/${card.qty}`;
+  } else {
+    part?.remove();
+  }
+  const qtyEl = el.querySelector('.cq-num');
+  qtyEl.textContent = `${card.owned}/${card.qty}`;
+  qtyEl.className = 'cq-num '+ownedClass(card.owned, card.qty);
+}
+
+function updateListCardVisual(el, card) {
+  const isOwned = card.owned >= card.qty;
+  el.className = 'c-row '+(isOwned?'owned':'missing');
+  el.querySelector('.r-check').textContent = isOwned ? '✓' : '';
+  const qtyEl = el.querySelector('.rq-num');
+  qtyEl.textContent = `${card.owned}/${card.qty}`;
+  qtyEl.className = 'rq-num '+ownedClass(card.owned, card.qty);
+}
+
+// Substitui o renderAll() nos cliques de toggle/qty: sidebar (% do deck) e
+// topbar (tenho/faltam/valor) dependem de agregados do deck inteiro e
+// continuam recalculando normalmente, só a grade evita reconstrução total.
+function refreshAfterCardMutation(deckId, cardId) {
+  renderSidebar();
+  renderTopbar();
+  updateCardInPlace(deckId, cardId);
 }
 
 function pkball(size=44) {
@@ -192,10 +272,10 @@ function buildGridCard(card, deckId) {
     // deveria marcar/desmarcar como possuída.
     if (curEditMode) return;
     if (e.target.closest('.cq-btn')||e.target.closest('.c-del-btn')) return;
-    toggleOwned(deckId, card.id); renderAll();
+    toggleOwned(deckId, card.id); refreshAfterCardMutation(deckId, card.id);
   });
   el.querySelectorAll('.cq-btn').forEach(b => b.addEventListener('click', e => {
-    e.stopPropagation(); adjustOwned(deckId, card.id, parseInt(b.dataset.d)); renderAll();
+    e.stopPropagation(); adjustOwned(deckId, card.id, parseInt(b.dataset.d)); refreshAfterCardMutation(deckId, card.id);
   }));
   el.querySelector('.c-del-btn').addEventListener('click', e => {
     e.stopPropagation(); deleteCard(deckId, card.id); renderAll();
@@ -213,6 +293,7 @@ function buildListCard(card, deckId) {
   const isOwned = card.owned >= card.qty;
   const el = document.createElement('div');
   el.className = 'c-row '+(isOwned?'owned':'missing');
+  el.dataset.cardId = card.id; // usado por updateCardInPlace() pra localizar a linha sem reconstruir a lista
   const tc = TC[card.type]||'#888';
   el.innerHTML = `
     <div class="r-thumb">
@@ -234,10 +315,10 @@ function buildListCard(card, deckId) {
     </div>`;
   el.addEventListener('click', e => {
     if (e.target.closest('.rq-btn')||e.target.closest('.r-acts')) return;
-    toggleOwned(deckId, card.id); renderAll();
+    toggleOwned(deckId, card.id); refreshAfterCardMutation(deckId, card.id);
   });
   el.querySelectorAll('.rq-btn').forEach(b => b.addEventListener('click', e => {
-    e.stopPropagation(); adjustOwned(deckId, card.id, parseInt(b.dataset.d)); renderAll();
+    e.stopPropagation(); adjustOwned(deckId, card.id, parseInt(b.dataset.d)); refreshAfterCardMutation(deckId, card.id);
   }));
   el.querySelector('.r-del').addEventListener('click', e => {
     e.stopPropagation(); deleteCard(deckId, card.id); renderAll();
