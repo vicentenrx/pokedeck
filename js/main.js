@@ -33,6 +33,22 @@ async function enterApp() {
   renderAll();
 }
 
+// Carrega os decks da nuvem e só então entra no app — usado tanto no boot
+// (sessão salva) quanto no submit de login. Se loadSb() não conseguir
+// confirmar nem "tem deck" nem "conta realmente vazia" (ex: falha de
+// rede), NÃO entra no app com o estado local vazio — isso faria o próximo
+// save() criar o deck de demonstração e sobrescrever os decks reais na
+// nuvem. Mostra a tela de "tentar de novo" em vez disso.
+async function loadSbAndEnter() {
+  const result = await loadSb();
+  if (result === 'error' && !state.decks.length) {
+    showLoadError();
+    return false;
+  }
+  await enterApp();
+  return true;
+}
+
 async function init() {
   loadLocal();
   // Se o usuário veio de um link de e-mail (confirmar cadastro ou
@@ -47,8 +63,7 @@ async function init() {
     session = null;
   }
   if (session) {
-    await loadSb();
-    await enterApp();
+    await loadSbAndEnter();
   } else {
     showAuthGate();
   }

@@ -10,6 +10,13 @@ function showAuthGate() {
 function hideAuthGate() {
   $('auth-gate').classList.add('hidden');
 }
+// Mostra a tela de "não deu pra carregar seus decks, tenta de novo" — sem
+// abas de Entrar/Criar Conta, porque a sessão já é válida nesse ponto (o
+// problema foi ler os decks na nuvem, não autenticar).
+function showLoadError() {
+  $('auth-gate').classList.remove('hidden');
+  showAgView('ag-load-error');
+}
 
 // Todas as "telas" dentro do cartão de auth — sign in, cadastro, aviso de
 // confirmação de e-mail, e agora o fluxo de recuperação de senha (pedido +
@@ -17,6 +24,7 @@ function hideAuthGate() {
 const AG_VIEWS = [
   'ag-form-signin', 'ag-form-signup', 'ag-verify',
   'ag-form-forgot', 'ag-fg-sent', 'ag-form-reset', 'ag-rs-done',
+  'ag-load-error',
 ];
 function showAgView(id) {
   AG_VIEWS.forEach(v => $(v).classList.toggle('hidden', v !== id));
@@ -68,15 +76,19 @@ $('ag-form-signin').addEventListener('submit', async e => {
   btn.disabled = true; btn.textContent = 'Entrando...';
   try {
     await signIn(email, password);
-    await loadSb();
-    await enterApp();
-    // _justConfirmedSignup só fica true quando esse login vem logo depois de
-    // um redirect de confirmação de cadastro (type=signup) — ou seja, é
-    // fisicamente o primeiro login de verdade dessa conta (sem confirmar,
-    // o Supabase recusa o login normal). Fora desse caso específico,
-    // "de volta" está sempre certo.
-    toast(_justConfirmedSignup ? 'Conta confirmada! Bem-vindo ao PokéDeck!' : 'Bem-vindo de volta!');
-    _justConfirmedSignup = false;
+    const entered = await loadSbAndEnter();
+    // Se não entrou (loadSbAndEnter mostrou a tela de "tentar de novo"
+    // porque não deu pra confirmar se a conta tem deck salvo), não avisa
+    // "bem-vindo" — ainda não estamos dentro do app.
+    if (entered) {
+      // _justConfirmedSignup só fica true quando esse login vem logo depois de
+      // um redirect de confirmação de cadastro (type=signup) — ou seja, é
+      // fisicamente o primeiro login de verdade dessa conta (sem confirmar,
+      // o Supabase recusa o login normal). Fora desse caso específico,
+      // "de volta" está sempre certo.
+      toast(_justConfirmedSignup ? 'Conta confirmada! Bem-vindo ao PokéDeck!' : 'Bem-vindo de volta!');
+      _justConfirmedSignup = false;
+    }
   } catch (err) {
     setAgError('ag-in-error', friendlyAuthError(err.message));
   } finally {
@@ -174,6 +186,16 @@ $('ag-forgot-link').addEventListener('click', () => {
 $('ag-fg-back').addEventListener('click', () => switchAgTab('signin'));
 $('ag-fg-sent-back').addEventListener('click', () => switchAgTab('signin'));
 $('ag-rs-done-back').addEventListener('click', () => switchAgTab('signin'));
+
+$('ag-load-error-retry').addEventListener('click', async () => {
+  // Se a sessão morreu enquanto a pessoa olhava essa tela (raro, mas
+  // possível), não adianta tentar carregar de novo — manda pro login normal.
+  if (!session) { showAuthGate(); return; }
+  const btn = $('ag-load-error-retry');
+  btn.disabled = true; btn.textContent = 'Tentando de novo...';
+  await loadSbAndEnter();
+  btn.disabled = false; btn.textContent = 'Tentar de novo';
+});
 
 $('ag-form-forgot').addEventListener('submit', async e => {
   e.preventDefault();
