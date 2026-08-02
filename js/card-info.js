@@ -78,7 +78,10 @@ async function renderCardInfoPrice(card) {
 }
 
 async function fetchAndApplyMeta(card) {
-  const meta = await fetchCardMeta(card.name, card.set);
+  // Direto na API remota (não fetchCardMeta) — é a única fonte de preço real,
+  // o banco local não tem preço de mercado (muda todo dia, não faz parte do
+  // dataset aberto importado).
+  const meta = await fetchRemoteCardMeta(card.name, card.set);
   const c = currentInfoCard();
   if (!c || c.id !== card.id) return; // usuário já fechou/trocou de carta
   applyCardMeta(c, meta);

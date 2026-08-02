@@ -12,6 +12,53 @@ function ptcgFetch(url, timeoutMs=7000) {
     .finally(() => clearTimeout(timer));
 }
 
+// ═══════════════════════════════════════════════════════════════
+// BANCO LOCAL (ptcg_cards, importado do dataset aberto pokemon-tcg-data)
+// ═══════════════════════════════════════════════════════════════
+// Cópia local de ~20 mil cartas (nome/número/coleção/imagem/raridade/tipo)
+// direto no nosso Supabase — não depende da instabilidade da API de
+// terceiro pra isso. Só não tem preço (o dataset aberto não traz preço de
+// mercado, que muda todo dia); preço continua vindo só da API de terceiro,
+// ver fetchRemoteCardMeta.
+async function searchLocalCards(q, limit=20, setCode='') {
+  let url = `${SB_URL}/rest/v1/ptcg_cards?select=name,number,set_id,set_name,set_code,supertype,rarity,image_small,image_large`
+    + `&name=ilike.*${encodeURIComponent(q.trim())}*&limit=${limit}`;
+  if (setCode) url += `&set_code=eq.${encodeURIComponent(setCode)}`;
+  try {
+    const res = await fetch(url, { headers: { apikey: SB_ANON_KEY, Authorization: `Bearer ${SB_ANON_KEY}` } });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return rows.map(r => ({
+      name: r.name, number: r.number, supertype: r.supertype, rarity: r.rarity,
+      images: { small: r.image_small, large: r.image_large },
+      set: { name: r.set_name, ptcgoCode: r.set_code, id: r.set_id },
+    }));
+  } catch { return []; }
+}
+
+async function fetchLocalCardMeta(name, setCode='') {
+  let url = `${SB_URL}/rest/v1/ptcg_cards?select=number,rarity,supertype,image_small,image_large`
+    + `&name=ilike.${encodeURIComponent(name.trim())}&order=id&limit=1`;
+  if (setCode) {
+    const parts = setCode.trim().split(/\s+/);
+    const num  = parts[parts.length-1];
+    const code = parts.length > 1 ? parts.slice(0,-1).join(' ') : '';
+    if (/^[A-Za-z]{0,4}\d+[A-Za-z]?$/.test(num))  url += `&number=eq.${encodeURIComponent(num)}`;
+    if (/^[A-Za-z0-9]{2,8}$/.test(code)) url += `&set_code=eq.${encodeURIComponent(code)}`;
+  }
+  try {
+    const res = await fetch(url, { headers: { apikey: SB_ANON_KEY, Authorization: `Bearer ${SB_ANON_KEY}` } });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows.length) return null;
+    const r = rows[0];
+    return {
+      img: r.image_small||'', imgLarge: r.image_large||'', number: r.number||'',
+      rarity: mapRarity(r.rarity), priceUsd: null, priceEur: null, type: apiType(r.supertype),
+    };
+  } catch { return null; }
+}
+
 // Retorna null quando a busca falhou de verdade (API fora do ar/erro HTTP),
 // e um array (vazio ou não) quando a busca respondeu normalmente — o
 // chamador precisa distinguir os dois casos ("API falhou" vs "carta não
@@ -20,6 +67,10 @@ function ptcgFetch(url, timeoutMs=7000) {
 // funcionar segundos depois.
 async function apiSearch(q, limit=20, setCode='') {
   if (!q || q.length < 2) return [];
+  const local = await searchLocalCards(q, limit, setCode);
+  if (local.length) return local;
+  // Não achou no banco local (coleção lançada depois da nossa última
+  // importação, por exemplo) — cai pra API de terceiro como antes.
   let query = `name:"${q.trim()}"`;
   if (setCode) query += ` set.ptcgoCode:${setCode}`;
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -79,13 +130,27 @@ function cardToMeta(card) {
   };
 }
 
-// Medido direto em 2026-07-30: de 15 nomes de carta comuns, 7 vieram com
-// erro 500 na primeira tentativa (quase metade!). É a causa real de "a
-// maioria das cartas fica sem foto" — antes essa função tentava só uma vez.
-// 3 tentativas (não 2, como em apiSearch) porque essa aqui roda em segundo
-// plano sem ninguém esperando na tela, então vale gastar mais tempo pra
-// não perder a imagem por causa de instabilidade momentânea da API.
+// Nome/imagem/raridade/tipo/número: tenta o banco local primeiro (rápido,
+// não depende da API de terceiro — resolve a causa mais comum de "carta
+// sem imagem"). Só cai pra API remota (com preço) se a carta genuinamente
+// não estiver na nossa cópia. Preço em si nunca vem do banco local (o
+// dataset aberto não traz preço de mercado) — quem precisa de preço de
+// verdade (o painel de informações da carta) chama fetchRemoteCardMeta
+// direto, não esta função.
 async function fetchCardMeta(name, setCode='') {
+  const local = await fetchLocalCardMeta(name, setCode);
+  if (local && local.img) return local;
+  return fetchRemoteCardMeta(name, setCode);
+}
+
+// Medido direto em 2026-07-30: de 15 nomes de carta comuns, 7 vieram com
+// erro 500 na primeira tentativa (quase metade!). Era a causa real de "a
+// maioria das cartas fica sem foto" antes do banco local existir — essa
+// função tentava só uma vez. 3 tentativas (não 2, como em apiSearch) porque
+// essa aqui roda em segundo plano sem ninguém esperando na tela, então vale
+// gastar mais tempo pra não perder a imagem por causa de instabilidade
+// momentânea da API.
+async function fetchRemoteCardMeta(name, setCode='') {
   const key = (name+setCode).toLowerCase().trim();
   if (imgCache[key] !== undefined) return imgCache[key];
   let q = `name:"${name.trim()}"`;
@@ -120,7 +185,7 @@ async function fetchCardMeta(name, setCode='') {
       if (meta.img) imgCache[key] = meta;
       return meta;
     } catch (err) {
-      if (attempt === 3) { console.warn('[ptcg] fetchCardMeta falhou 3x:', err); return cardToMeta(null); }
+      if (attempt === 3) { console.warn('[ptcg] fetchRemoteCardMeta falhou 3x:', err); return cardToMeta(null); }
     }
   }
 }
