@@ -6,26 +6,32 @@
 // Pointer Events unifica mouse, touch e caneta no mesmo código.
 // O gatilho é só a alcinha (.dk-handle), não o card inteiro, pra não
 // conflitar com o toque que seleciona o deck.
-let _dragEl = null, _dragFrom = -1, _dragStartY = 0;
+let _dragEl = null, _dragFrom = -1, _dragStartY = 0, _dragPointerId = null;
 
 function initDragDrop() {
   const container = $('deck-list');
   container.querySelectorAll('.dk-handle').forEach(handle => {
     handle.addEventListener('pointerdown', e => {
+      if (_dragEl) return; // já tem um arraste em andamento com outro ponteiro
       const item = handle.closest('.dk-item');
       if (!item) return;
       e.preventDefault();
       _dragEl = item;
       _dragFrom = parseInt(item.dataset.idx, 10);
       _dragStartY = e.clientY;
+      _dragPointerId = e.pointerId;
       handle.setPointerCapture(e.pointerId);
       item.classList.add('dragging');
     });
   });
 }
 
+// Só reage ao pointerId que de fato iniciou o arraste — sem isso, um
+// segundo toque (ex: a palma da mão encostando na tela enquanto se segura
+// o celular) também dispara pointermove/pointerup no document inteiro e
+// podia mover a carta errada ou encerrar o arraste no meio do gesto.
 document.addEventListener('pointermove', e => {
-  if (!_dragEl) return;
+  if (!_dragEl || e.pointerId !== _dragPointerId) return;
   _dragEl.style.transform = `translateY(${e.clientY - _dragStartY}px)`;
 
   const container = $('deck-list');
@@ -37,8 +43,8 @@ document.addEventListener('pointermove', e => {
   }
 });
 
-function endDrag() {
-  if (!_dragEl) return;
+function endDrag(e) {
+  if (!_dragEl || (e && e.pointerId !== _dragPointerId)) return;
   const container = $('deck-list');
   const target = container.querySelector('.drag-over');
   _dragEl.style.transform = '';
@@ -52,7 +58,7 @@ function endDrag() {
       save(); renderSidebar();
     }
   }
-  _dragEl = null; _dragFrom = -1;
+  _dragEl = null; _dragFrom = -1; _dragPointerId = null;
 }
 document.addEventListener('pointerup', endDrag);
 document.addEventListener('pointercancel', endDrag);
@@ -79,7 +85,7 @@ document.addEventListener('pointercancel', endDrag);
 // tenho-falta) — a posição na tela não bate com o índice real nesse caso.
 const CARD_HOLD_MS = 280, CARD_MOVE_CANCEL_PX = 10, CARD_ARM_PX = 6;
 let _cardDown = null;                       // {el,id,pointerId,x,y,pointerType,timer} — antes de armar
-let _cardDragEl = null, _cardDragId = null; // depois de armar
+let _cardDragEl = null, _cardDragId = null, _cardDragPointerId = null; // depois de armar
 let _cardOffsetX = 0, _cardOffsetY = 0, _cardPlaceholder = null, _cardLastUnder = null;
 
 function initCardDragDrop() {
@@ -105,6 +111,7 @@ function armCardDrag(down, x, y) {
 
   _cardDragEl = el;
   _cardDragId = down.id;
+  _cardDragPointerId = down.pointerId;
   _cardOffsetX = x - rect.left;
   _cardOffsetY = y - rect.top;
   _cardLastUnder = null;
@@ -125,8 +132,12 @@ function armCardDrag(down, x, y) {
   el.classList.add('dragging');
 }
 
+// Cada bloco só reage ao pointerId que de fato originou o gesto — sem
+// isso, um segundo dedo tocando a tela (ex: a palma da mão segurando o
+// celular) podia cancelar o "segurar pra armar" do primeiro dedo, ou mover
+// a carta já armada pra posição de um dedo que não é o que está arrastando.
 document.addEventListener('pointermove', e => {
-  if (_cardDown && !_cardDragEl) {
+  if (_cardDown && !_cardDragEl && e.pointerId === _cardDown.pointerId) {
     const dist = Math.hypot(e.clientX - _cardDown.x, e.clientY - _cardDown.y);
     if (_cardDown.pointerType === 'mouse') {
       if (dist > CARD_ARM_PX) armCardDrag(_cardDown, e.clientX, e.clientY);
@@ -135,7 +146,7 @@ document.addEventListener('pointermove', e => {
       _cardDown = null; // o gesto virou rolagem, não arraste
     }
   }
-  if (!_cardDragEl) return;
+  if (!_cardDragEl || e.pointerId !== _cardDragPointerId) return;
   e.preventDefault();
   _cardDragEl.style.left = (e.clientX - _cardOffsetX) + 'px';
   _cardDragEl.style.top  = (e.clientY - _cardOffsetY) + 'px';
@@ -185,9 +196,20 @@ function updateCardFlipTarget(x, y) {
 // meio de um arraste por um motivo sem relação nenhuma (ex: uma busca de
 // preço em segundo plano que termina bem nesse instante) e destruiria a
 // grade por baixo do arraste em andamento se não comitarmos antes.
-function finishCardDrag() {
-  if (_cardDown) { clearTimeout(_cardDown.timer); _cardDown = null; }
+//
+// pointerId é opcional: quando vem de um evento pointerup/pointercancel,
+// só finaliza se for o mesmo ponteiro que armou o arraste (um segundo dedo
+// não deveria conseguir encerrar o arraste do primeiro) — quando chamada
+// sem argumento (do renderCards(), por um motivo não relacionado a nenhum
+// ponteiro específico), finaliza de qualquer jeito, sem filtrar.
+function finishCardDrag(pointerId) {
+  if (_cardDown) {
+    if (pointerId !== undefined && _cardDown.pointerId !== pointerId) return false;
+    clearTimeout(_cardDown.timer);
+    _cardDown = null;
+  }
   if (!_cardDragEl) return false;
+  if (pointerId !== undefined && _cardDragPointerId !== pointerId) return false;
   const grid = $('card-grid');
   const deck = activeDeck();
   const draggedId = _cardDragId;
@@ -214,11 +236,11 @@ function finishCardDrag() {
   _cardDragEl.style.touchAction = '';
   _cardDragEl.classList.remove('dragging');
 
-  _cardDragEl = null; _cardDragId = null; _cardPlaceholder = null; _cardLastUnder = null;
+  _cardDragEl = null; _cardDragId = null; _cardDragPointerId = null; _cardPlaceholder = null; _cardLastUnder = null;
   return true;
 }
-function endCardDrag() {
-  if (finishCardDrag()) renderCards();
+function endCardDrag(e) {
+  if (finishCardDrag(e?.pointerId)) renderCards();
 }
 document.addEventListener('pointerup', endCardDrag);
 document.addEventListener('pointercancel', endCardDrag);
