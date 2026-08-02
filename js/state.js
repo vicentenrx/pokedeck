@@ -35,7 +35,47 @@ function loadLocal() {
 
 function saveLocal() { localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
 
-function save() { saveLocal(); syncSb(); }
+// save() é chamado a cada mutação pequena (marcar posse, ajustar
+// quantidade, arrastar carta...). Sem fila, cada chamada disparava seu
+// próprio POST pro Supabase, concorrente e sem ordem garantida: como é um
+// upsert simples (substitui a coluna "data" inteira), se uma requisição
+// mais antiga responder DEPOIS de uma mais nova, ela "vence" e regride o
+// que está salvo na nuvem — e o próximo carregamento (outro
+// dispositivo, ou só um F5) puxa essa versão desatualizada de volta.
+// saveLocal() continua instantâneo e síncrono (nada muda pro dispositivo
+// atual); só a sincronização com a nuvem é adiada um pouco e nunca roda
+// mais de uma vez em paralelo — uma mutação que chega enquanto a
+// sincronização anterior ainda está em voo só dispara de novo (já com o
+// estado mais atual) assim que a anterior terminar.
+let _syncTimer = null, _syncInFlight = false, _syncPending = false;
+
+function save() {
+  saveLocal();
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(runSync, 500);
+}
+
+async function runSync() {
+  if (_syncInFlight) { _syncPending = true; return; }
+  _syncInFlight = true;
+  try {
+    await syncSb();
+  } finally {
+    _syncInFlight = false;
+    if (_syncPending) { _syncPending = false; runSync(); }
+  }
+}
+
+// Se a aba for escondida (troca de app, fecha) com uma sincronização ainda
+// esperando o atraso do debounce, manda na hora em vez de arriscar perder
+// essa última mutação por causa do atraso artificial.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && _syncTimer) {
+    clearTimeout(_syncTimer);
+    _syncTimer = null;
+    runSync();
+  }
+});
 
 function saveSession(sess) {
   session = sess;
