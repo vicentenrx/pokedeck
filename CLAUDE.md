@@ -25,7 +25,17 @@ build step — servir a pasta (ou abrir `index.html`) já roda o app inteiro.
   - `utils.js` — `$`, `esc` (escapa aspas também, ver Segurança), `toast`, `openModal`/`closeModal`.
   - `api-ptcg.js` — tudo que fala com a API do Pokémon TCG, incluindo `ptcgFetch` (todo fetch tem timeout, ver Instabilidade Conhecida) e `applyCardMeta` (merge seguro, ver Segurança).
   - `api-auth.js` / `api-supabase.js` / `api-rates.js` — auth do Supabase, sync do deck, câmbio USD/EUR→BRL.
-  - `deck-logic.js`, `render.js`, `dragdrop.js`, `events.js`, `auth-gate.js`, `card-info.js`, `main.js`.
+  - `deck-logic.js`, `render.js`, `dragdrop.js`, `auth-gate.js`, `card-info.js`, `main.js`.
+  - `events-*.js` — listeners de UI, um arquivo por responsabilidade (ordem
+    no `index.html` importa só entre eles: `events-card-search.js`, com o
+    helper de autocomplete compartilhado, precisa carregar antes de
+    `events-card-add.js`/`events-card-edit.js`): `events-sidebar.js`
+    (sidebar mobile + color picker), `events-deck.js` (modal criar/editar
+    deck), `events-card-search.js` (autocomplete + filtro de coleção
+    compartilhados), `events-card-add.js`/`events-card-edit.js` (modais de
+    carta), `events-import-export.js` (import/export de lista + retry de
+    imagens), `events-filters.js` (filtros/busca/ordenar da grade),
+    `events-misc.js` (logout, ESC, barra de ações mobile).
 
 ## Infraestrutura (contas reais)
 
