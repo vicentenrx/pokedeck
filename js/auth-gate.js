@@ -117,7 +117,15 @@ $('ag-form-signup').addEventListener('submit', async e => {
       toast('Conta criada!');
     }
   } catch (err) {
-    setAgError('ag-up-error', friendlyAuthError(err.message));
+    // Mesma ambiguidade proposital de requestPasswordReset(): não revela que o
+    // e-mail já tem conta (evita enumeração). Trata como se o cadastro tivesse
+    // dado certo e precisasse de confirmação — tela idêntica à do caminho novo.
+    if (/already registered|already been registered/i.test(err.message)) {
+      $('ag-verify-email').textContent = email;
+      showAgView('ag-verify');
+    } else {
+      setAgError('ag-up-error', friendlyAuthError(err.message));
+    }
   } finally {
     btn.disabled = false; btn.textContent = 'Criar Conta';
   }
