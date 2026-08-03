@@ -46,8 +46,3 @@ async function loadSb() {
     }
   }
 }
-
-function renderAccountBar() {
-  if (!session) return;
-  $('sb-account-email').textContent = session.user.email;
-}

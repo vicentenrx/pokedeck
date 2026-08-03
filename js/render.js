@@ -36,7 +36,6 @@ function renderSidebar() {
     const pct   = total ? Math.round(owned/total*100) : 0;
     const el    = document.createElement('div');
     el.className = 'dk-item' + (state.activeId===deck.id?' active':'');
-    el.setAttribute('draggable','true');
     el.dataset.idx = idx;
     el.innerHTML = `
       <span class="dk-handle" title="Arrastar para reordenar">⠿</span>
@@ -64,6 +63,11 @@ function renderSidebar() {
     list.appendChild(el);
   });
   initDragDrop();
+}
+
+function renderAccountBar() {
+  if (!session) return;
+  $('sb-account-email').textContent = session.user.email;
 }
 
 function renderTopbar() {
