@@ -100,6 +100,33 @@ function parseDeckList(text) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// CARD FACTORY
+// ═══════════════════════════════════════════════════════════════
+// Único lugar que sabe o formato completo de uma carta — os três lugares
+// que criam carta (m-card-save, m-import-save, deck de demonstração)
+// passam por aqui pra nunca mais divergir no conjunto de campos.
+function createCard(fields = {}) {
+  return {
+    id: uid(),
+    name: '',
+    set: '',
+    qty: 1,
+    owned: 0,
+    type: 'Pokémon',
+    img: '',
+    imgLarge: '',
+    number: '',
+    rarity: '',
+    priceUsd: null,
+    priceEur: null,
+    condition: 'NM',
+    notes: '',
+    priceUpdatedAt: null,
+    ...fields,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // CARD MUTATIONS
 // ═══════════════════════════════════════════════════════════════
 function toggleOwned(deckId, cardId) {

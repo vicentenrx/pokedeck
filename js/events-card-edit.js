@@ -59,6 +59,12 @@ $('m-edit-card-save').addEventListener('click', async () => {
   card.qty     = Math.max(1, Math.min(max, parseInt($('ec-qty').value)||1));
   if (card.owned > card.qty) card.owned = card.qty;
 
+  const nameOrSetChanged = card.name !== origName || card.set !== origSet;
+  // Nome/coleção mudaram: invalida qualquer busca de metadado antiga ainda em
+  // voo pra essa carta (do Adicionar Carta ou de uma edição anterior) — senão
+  // ela pode terminar depois dessa edição e sobrescrever com dados errados.
+  if (nameOrSetChanged) bumpCardMetaGen(card.id);
+
   const usedSuggestion = !!pendingEditCardMeta;
   if (usedSuggestion) {
     applyCardMeta(card, pendingEditCardMeta);
@@ -68,11 +74,14 @@ $('m-edit-card-save').addEventListener('click', async () => {
   save(); closeModal('m-edit-card'); renderAll();
   toast('Carta atualizada!');
 
-  if (!usedSuggestion && (card.name !== origName || card.set !== origSet)) {
+  if (!usedSuggestion && nameOrSetChanged) {
     // Editou nome/coleção manualmente (sem escolher sugestão): tenta achar a imagem certa em segundo plano.
+    const gen = cardMetaGen.get(card.id);
     const meta = await fetchCardMeta(card.name, card.set);
-    applyCardMeta(card, meta);
-    if (meta.img) card.priceUpdatedAt = new Date().toISOString();
-    save(); renderAll();
+    if (cardMetaGen.get(card.id) === gen) {
+      applyCardMeta(card, meta);
+      if (meta.img) card.priceUpdatedAt = new Date().toISOString();
+      save(); renderAll();
+    }
   }
 });

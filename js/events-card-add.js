@@ -9,14 +9,16 @@ $('btn-add-card').addEventListener('click', async () => {
   openModal('m-card');
   // Sem foco automático: no mobile o teclado sobe na hora e tampa quase a
   // tela inteira do modal antes da pessoa nem ver os campos. Ela toca pra buscar quando quiser.
-  // Atualiza limite do campo qty conforme tipo selecionado
-  $('c-type').addEventListener('change', () => {
-    const isEnergy = $('c-type').value === 'Energia';
-    $('c-qty').max = isEnergy ? 60 : 4;
-  });
   await populateSetFilter($('api-set-filter'));
 });
 $('m-card-cancel').addEventListener('click', () => closeModal('m-card'));
+
+// Atualiza limite do campo qty conforme tipo selecionado — registrado uma
+// única vez (fora do handler de abertura do modal, que roda a cada clique)
+$('c-type').addEventListener('change', () => {
+  const isEnergy = $('c-type').value === 'Energia';
+  $('c-qty').max = isEnergy ? 60 : 4;
+});
 
 // Card search suggestions
 const { show: showSugg, hide: hideSugg } = setupCardSuggest({
@@ -44,19 +46,21 @@ $('m-card-save').addEventListener('click', async () => {
   if (!name) { $('c-search').focus(); return; }
   const isEnergy = $('c-type').value === 'Energia';
   const qty  = Math.max(1, Math.min(isEnergy ? 60 : 4, parseInt($('c-qty').value)||1));
-  const card = {
-    id:uid(), name, set:$('c-set').value.trim(), qty, owned:0, type:$('c-type').value, img:$('c-img').value,
-    imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null, condition:'NM', notes:'',
+  const card = createCard({
+    name, set:$('c-set').value.trim(), qty, owned:0, type:$('c-type').value, img:$('c-img').value,
     priceUpdatedAt: pendingCardMeta ? new Date().toISOString() : null,
     ...(pendingCardMeta || {}),
-  };
+  });
   const deck = activeDeck();
   deck.cards.push(card);
   save(); closeModal('m-card'); renderAll(); toast('Carta adicionada!');
   if (!pendingCardMeta) { // veio de preenchimento manual: tenta achar preço/raridade em segundo plano
+    const gen = bumpCardMetaGen(card.id); // se essa carta for editada antes da busca voltar, o resultado é descartado
     const meta = await fetchCardMeta(card.name, card.set);
-    applyCardMeta(card, meta);
-    if (meta.img) card.priceUpdatedAt = new Date().toISOString(); // achou: não precisa tentar de novo depois
-    save(); renderAll();
+    if (cardMetaGen.get(card.id) === gen) {
+      applyCardMeta(card, meta);
+      if (meta.img) card.priceUpdatedAt = new Date().toISOString(); // achou: não precisa tentar de novo depois
+      save(); renderAll();
+    }
   }
 });

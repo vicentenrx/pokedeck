@@ -9,8 +9,13 @@
 async function fetchCardMetaInBatches(cards, batchSize, onBatch) {
   for (let i = 0; i < cards.length; i += batchSize) {
     const batch = cards.slice(i, i + batchSize);
-    const metas = await Promise.all(batch.map(card => fetchCardMeta(card.name, card.set)));
-    await onBatch(batch, metas);
+    // Geração de cada carta capturada ANTES da busca sair — nada no fluxo de
+    // Importar/"Buscar de novo" bloqueia o modal Editar Carta durante o lote
+    // (m-import fecha antes deste loop começar; retryingImages só desabilita
+    // o próprio botão), então uma edição manual concorrente é real aqui.
+    const gens   = batch.map(card => cardMetaGen.get(card.id) || 0);
+    const metas  = await Promise.all(batch.map(card => fetchCardMeta(card.name, card.set)));
+    await onBatch(batch, metas, gens);
   }
 }
 
@@ -29,19 +34,17 @@ $('m-import-save').addEventListener('click', async () => {
   const parsed = parseDeckList(text);
   if (!parsed.length) { toast('Nenhuma carta reconhecida. Verifique o formato.'); return; }
   const deck = activeDeck();
-  const newCards = parsed.map(p => ({
-    id:uid(), ...p, owned:0, img:'', imgLarge:'', number:'', rarity:'', priceUsd:null, priceEur:null,
-    priceUpdatedAt:null, condition:'NM', notes:'',
-  }));
+  const newCards = parsed.map(p => createCard({ ...p, owned:0 }));
   deck.cards.push(...newCards);
   save(); closeModal('m-import'); renderAll();
   toast(`${parsed.length} cartas importadas! Buscando imagens e preços...`);
   let fetched = 0;
-  await fetchCardMetaInBatches(newCards, 4, async (batch, metas) => {
+  await fetchCardMetaInBatches(newCards, 4, async (batch, metas, gens) => {
+    const byId = new Map(deck.cards.map(c => [c.id, c]));
     batch.forEach((card, i) => {
       const meta = metas[i];
-      if (meta.img) {
-        const c = deck.cards.find(x=>x.id===card.id);
+      if (meta.img && cardMetaGen.get(card.id) === gens[i]) { // descarta se a carta foi editada manualmente enquanto essa busca estava no ar
+        const c = byId.get(card.id);
         if (c) { applyCardMeta(c, meta); c.priceUpdatedAt = new Date().toISOString(); fetched++; }
       }
     });
@@ -76,11 +79,12 @@ $('btn-retry-images').addEventListener('click', async () => {
   btn.classList.add('loading');
   toast(`Buscando imagem de ${missing.length} carta${missing.length!==1?'s':''}...`);
   let found = 0;
-  await fetchCardMetaInBatches(missing, 4, async (batch, metas) => {
+  await fetchCardMetaInBatches(missing, 4, async (batch, metas, gens) => {
+    const byId = new Map(deck.cards.map(c => [c.id, c]));
     batch.forEach((card, i) => {
       const meta = metas[i];
-      if (meta.img) {
-        const c = deck.cards.find(x=>x.id===card.id);
+      if (meta.img && cardMetaGen.get(card.id) === gens[i]) { // descarta se a carta foi editada manualmente enquanto essa busca estava no ar
+        const c = byId.get(card.id);
         if (c) { applyCardMeta(c, meta); c.priceUpdatedAt = new Date().toISOString(); found++; }
       }
     });

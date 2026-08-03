@@ -19,6 +19,20 @@ let curEditMode = false; // "modo de ordenar": ativa o arraste livre das cartas 
 let editSearchTmr = null;
 let pendingEditCardMeta = null; // metadados da sugestão clicada no modal Editar Carta
 
+// Token de geração por carta: evita que uma busca de metadado em segundo
+// plano (disparada depois de salvar Adicionar/Editar Carta ou durante um
+// Importar/"Buscar de novo") aplique um resultado desatualizado por cima de
+// uma edição manual mais recente da MESMA carta. Incrementa toda vez que
+// name/set mudam por edição manual — quem disparou uma busca antes disso
+// compara a geração capturada no início contra a atual e descarta o
+// resultado se elas não baterem mais.
+let cardMetaGen = new Map(); // cardId -> geração atual
+function bumpCardMetaGen(cardId) {
+  const gen = (cardMetaGen.get(cardId) || 0) + 1;
+  cardMetaGen.set(cardId, gen);
+  return gen;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PERSIST
 // ═══════════════════════════════════════════════════════════════
