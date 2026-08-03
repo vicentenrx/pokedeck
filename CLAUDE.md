@@ -64,7 +64,7 @@ build step — servir a pasta (ou abrir `index.html`) já roda o app inteiro.
 `set` é sempre "CÓDIGO NÚMERO" combinado (ex: `"OBF 125"`) — várias partes
 do código fazem parse disso de volta (ver `splitSetCode` em `card-info.js`).
 `rarity` é só leitura, vem da API. `condition` (`M`/`NM`/`SP`/`MP`/`HP`/`D`,
-ver `CONDITION_LABEL`/`CONDITION_MULT` em `constants.js`) é o único campo de
+ver `CONDITION_MULT` em `constants.js`) é o único campo de
 "qualidade" editável pelo usuário, e só aplica um multiplicador local —
 nunca dispara busca na rede. `notes` é texto livre do usuário (ex: "comprada
 na loja X"); nunca é tocado por `applyCardMeta`, só pelo próprio usuário.

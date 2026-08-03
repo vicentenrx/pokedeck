@@ -7,14 +7,6 @@ const TE        = { 'Pokémon':'🔴','Treinador':'🔵','Energia':'⚡' };
 
 // Condição física da carta — multiplicador aproximado sobre o preço de mercado
 // (que já reflete uma carta em bom estado). Não vem de nenhuma API: é estimativa.
-const CONDITION_LABEL = {
-  M:  'M — Nova',
-  NM: 'NM — Praticamente Nova',
-  SP: 'SP — Usada Levemente',
-  MP: 'MP — Usada Moderadamente',
-  HP: 'HP — Muito Usada',
-  D:  'D — Danificada',
-};
 const CONDITION_MULT  = { M:1.1, NM:1, SP:0.85, MP:0.7, HP:0.5, D:0.3 };
 const PTCG      = 'https://api.pokemontcg.io/v2';
 const PTCG_KEY  = 'c36319a5-b878-49e1-8cdd-288aa3804a48';
