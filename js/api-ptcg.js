@@ -36,6 +36,16 @@ async function searchLocalCards(q, limit=20, setCode='') {
   } catch { return []; }
 }
 
+// Escapa os dois caracteres reservados de uma phrase query Lucene (\ e ")
+// antes de interpolar texto digitado pelo usuário em `name:"..."` — sem
+// isso, aspas ou barra invertida no texto fecham a phrase antes da hora (ou
+// tentam escapar o caractere seguinte) e injetam sintaxe de busca extra na
+// query. Não afeta dado nenhum (a API é read-only e pública), só evita busca
+// quebrada/erro. Convenção padrão de escape do Lucene: \ antes de \\ e ".
+function escapeLuceneQuery(str) {
+  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 // Extrai número e código da coleção de um setCode no formato "CÓDIGO NÚMERO"
 // (ex: "MEG 76"), cada um já validado — volta vazio se não bater no formato
 // esperado, quem chama só usa o que veio preenchido.
@@ -94,7 +104,7 @@ async function apiSearch(q, limit=20, setCode='') {
   if (local.length) return local;
   // Não achou no banco local (coleção lançada depois da nossa última
   // importação, por exemplo) — cai pra API de terceiro como antes.
-  let query = `name:"${q.trim()}"`;
+  let query = `name:"${escapeLuceneQuery(q.trim())}"`;
   if (setCode) query += ` set.ptcgoCode:${setCode}`;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -176,7 +186,7 @@ async function fetchCardMeta(name, setCode='') {
 async function fetchRemoteCardMeta(name, setCode='') {
   const key = (name+setCode).toLowerCase().trim();
   if (imgCache[key] !== undefined) return imgCache[key];
-  let q = `name:"${name.trim()}"`;
+  let q = `name:"${escapeLuceneQuery(name.trim())}"`;
   if (setCode) {
     const { num, code } = parseSetCode(setCode);
     if (num)  q += ` number:${num}`;
