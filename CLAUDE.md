@@ -72,6 +72,16 @@ build step — servir a pasta (ou abrir `index.html`) já roda o app inteiro.
 - **Pokémon TCG API**: chave grátis em `constants.js`. Já retorna preço real
   (TCGPlayer USD + Cardmarket EUR) em cada carta — é isso que alimenta o
   painel de informações, sem precisar de nenhuma API de preço adicional.
+- **`ptcg_cards` fica em dia sozinho** (desde 2026-08-04): Edge Function
+  `sync-ptcg-sets` compara as coleções já importadas (via RPC
+  `distinct_ptcg_set_ids()`) contra `sets/en.json` do dataset aberto
+  (`PokemonTCG/pokemon-tcg-data` no GitHub) e importa (via `upsert`,
+  idempotente) qualquer coleção nova que ainda não esteja no banco. Agendada
+  toda segunda-feira via `pg_cron`+`pg_net` (job `sync-ptcg-sets-weekly`,
+  ver Dashboard → Integrations → Cron, ou `supabase/migrations/`) — chama a
+  função sozinha, sem precisar de ninguém rodando SQL manualmente. Testado
+  ao vivo: removeu uma coleção real temporariamente, confirmou que a função
+  detectou a lacuna e reimportou os dados certos, depois reverteu o teste.
 
 ## Modelo de dados (card)
 
