@@ -65,12 +65,19 @@
 .cq-num.st-full{color:var(--owned);background:rgba(34,197,94,.15)}
 
 /* ── LIST CARDS (tabela densa — escanear muitas cartas rápido) ── */
+/* A coluna do nome era 1fr (esticava com todo o espaço sobrando) e empurrava
+   +/-, coleção e tipo pra bem longe do nome em telas largas — um nome curto
+   tipo "Arven" deixava mais de 500px de vazio antes dos botões de
+   quantidade. fit-content(240px) faz a coluna crescer só até onde
+   o texto precisa (até um teto de 240px, com "..." depois disso) — o resto
+   dos controles fica logo depois, colado no nome. O espaço sobrando vira uma
+   última coluna 1fr sem conteúdo (só preenche a linha até a borda direita).*/
 #card-list{display:none}
-.c-row-head{display:none;grid-template-columns:28px 20px 1fr 96px 90px 112px 104px;gap:10px;
+.c-row-head{display:none;grid-template-columns:28px 20px fit-content(240px) 96px 90px 112px 104px 1fr;gap:10px;
   align-items:center;padding:0 12px 8px;border:1px solid transparent}
 .c-row-head span{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--g500)}
 
-.c-row{display:grid;grid-template-columns:28px 20px 1fr 96px 90px 112px 104px;gap:10px;align-items:center;
+.c-row{display:grid;grid-template-columns:28px 20px fit-content(240px) 96px 90px 112px 104px 1fr;gap:10px;align-items:center;
   padding:6px 12px;border-radius:8px;background:var(--g800);border:1px solid var(--g700);
   margin-bottom:4px;cursor:pointer;position:relative;overflow:hidden;
   transition:border-color .15s,box-shadow .15s,opacity .25s,filter .25s}
@@ -90,7 +97,7 @@
   transition:all .22s var(--ease-spring);color:var(--white)}
 .c-row.owned .r-check{background:var(--owned);border-color:var(--owned);transform:scale(1.1)}
 
-.r-name{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--white);min-width:0}
+.r-name{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--white);min-width:0;justify-self:start;max-width:100%}
 .r-set{font-size:11px;color:var(--g400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .type-pill{font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;text-transform:uppercase;
   letter-spacing:.05em;text-align:center;justify-self:start}
@@ -106,6 +113,19 @@
 .rq-num.st-full{color:var(--owned);background:rgba(34,197,94,.15)}
 
 .r-acts{display:flex;align-items:center;gap:5px;justify-self:end}
+
+/* Modo de ordenar na lista -- mesma lógica/classes do modo de ordenar da
+   grade (ver bloco #card-grid.edit-mode acima), só que a linha inteira vira
+   a área de arrastar em vez de um quadrado, e o placeholder tracejado
+   (.c-row-ghost) é do tamanho de uma linha, não de uma carta. */
+#card-list.edit-mode .c-row{cursor:grab;touch-action:pan-y;border-style:dashed;border-color:var(--red-border);
+  -webkit-touch-callout:none;user-select:none}
+#card-list.edit-mode .c-row:hover{box-shadow:none}
+#card-list.edit-mode .c-row .r-acts,
+#card-list.edit-mode .c-row .rq-btn{display:none}
+#card-list.edit-mode .c-row.dragging{cursor:grabbing;z-index:999;box-shadow:0 18px 34px rgba(0,0,0,.5);
+  animation:c-thumb-jiggle .24s ease-in-out infinite;transition:box-shadow .15s}
+.c-row-ghost{border:1.5px dashed var(--red-border);border-radius:8px;background:var(--red-light)}
 .r-acts button{width:28px;height:28px;background:var(--g700);border:1.5px solid var(--g600);border-radius:7px;
   color:var(--g200);font-size:14px;display:flex;align-items:center;justify-content:center;
   transition:color .12s,background .12s,border-color .12s,transform .1s;line-height:1;cursor:pointer}

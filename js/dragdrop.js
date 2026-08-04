@@ -68,7 +68,7 @@ document.addEventListener('pointerup', endDrag);
 document.addEventListener('pointercancel', endDrag);
 
 // ═══════════════════════════════════════════════════════════════
-// REORDENAR CARTAS NA GRADE (modo de ordenar)
+// REORDENAR CARTAS (modo de ordenar — funciona na grade E na lista)
 // ═══════════════════════════════════════════════════════════════
 // Só liga quando o toggle "Ordenar" (curEditMode) está ativo. No touch, o
 // toque só vira arraste depois de segurar ~280ms sem mover muito — antes
@@ -77,24 +77,35 @@ document.addEventListener('pointercancel', endDrag);
 // mouse não existe esse conflito com rolagem, então arma no primeiro
 // movimento (limiar bem pequeno, só pra não confundir com um clique).
 //
-// Enquanto arrasta, um placeholder tracejado (.c-thumb-ghost) marca o lugar
-// da carta e os outros cards são de fato reordenados no DOM conforme o
-// dedo/mouse passa por cima deles — animados com a técnica FLIP (mede a
-// posição antes de mover, move, anima a diferença) — funciona em qualquer
-// layout de grade sem precisar calcular linha/coluna manualmente. A carta
-// arrastada em si vira position:fixed e simplesmente segue o cursor.
+// Enquanto arrasta, um placeholder tracejado (.c-thumb-ghost/.c-row-ghost,
+// ver cardDragGhostClass()) marca o lugar da carta e os outros itens são de
+// fato reordenados no DOM conforme o dedo/mouse passa por cima deles —
+// animados com a técnica FLIP (mede a posição antes de mover, move, anima a
+// diferença) — funciona em qualquer layout (grade OU lista) sem precisar
+// calcular linha/coluna manualmente. O item arrastado em si vira
+// position:fixed e simplesmente segue o cursor.
 //
 // Reordena por card.id preservando os "slots" ocupados pela lista filtrada
-// dentro de deck.cards, porque a grade pode estar filtrada (busca/coleção/
-// tenho-falta) — a posição na tela não bate com o índice real nesse caso.
+// dentro de deck.cards, porque a grade/lista pode estar filtrada (busca/
+// coleção/tenho-falta) — a posição na tela não bate com o índice real nesse caso.
 const CARD_HOLD_MS = 280, CARD_MOVE_CANCEL_PX = 10, CARD_ARM_PX = 6;
 let _cardDown = null;                       // {el,id,pointerId,x,y,pointerType,timer} — antes de armar
 let _cardDragEl = null, _cardDragId = null, _cardDragPointerId = null; // depois de armar
 let _cardOffsetX = 0, _cardOffsetY = 0, _cardPlaceholder = null, _cardLastUnder = null;
 
+// Grade e lista compartilham o mesmo "modo de ordenar" -- as duas funções
+// abaixo dizem, pro modo de visualização ATUAL, qual é o contêiner e qual é
+// o seletor do item arrastável. viewMode não muda no meio de um arraste (não
+// tem como clicar no toggle grade/lista com o ponteiro capturado), então dá
+// pra ler direto em qualquer ponto do gesto sem guardar isso à parte.
+function cardDragContainer() { return $(viewMode==='grid' ? 'card-grid' : 'card-list'); }
+function cardDragItemSel()   { return viewMode==='grid' ? '.c-thumb' : '.c-row'; }
+function cardDragGhostSel()  { return viewMode==='grid' ? '.c-thumb, .c-thumb-ghost' : '.c-row, .c-row-ghost'; }
+function cardDragGhostClass(){ return viewMode==='grid' ? 'c-thumb-ghost' : 'c-row-ghost'; }
+
 function initCardDragDrop() {
   if (!curEditMode) return;
-  document.querySelectorAll('#card-grid .c-thumb').forEach(el => {
+  cardDragContainer().querySelectorAll(cardDragItemSel()).forEach(el => {
     el.addEventListener('pointerdown', e => {
       if (_cardDown || _cardDragEl) return;
       const down = { el, id: el.dataset.cardId, pointerId: e.pointerId, x: e.clientX, y: e.clientY, pointerType: e.pointerType, timer: null };
@@ -121,7 +132,7 @@ function armCardDrag(down, x, y) {
   _cardLastUnder = null;
 
   _cardPlaceholder = document.createElement('div');
-  _cardPlaceholder.className = 'c-thumb-ghost';
+  _cardPlaceholder.className = cardDragGhostClass();
   _cardPlaceholder.style.width  = rect.width + 'px';
   _cardPlaceholder.style.height = rect.height + 'px';
   el.parentNode.insertBefore(_cardPlaceholder, el);
@@ -158,23 +169,26 @@ document.addEventListener('pointermove', e => {
 }, { passive: false });
 
 function updateCardFlipTarget(x, y) {
-  const grid = $('card-grid');
-  const under = document.elementFromPoint(x, y)?.closest('.c-thumb, .c-thumb-ghost');
+  const grid = cardDragContainer();
+  const under = document.elementFromPoint(x, y)?.closest(cardDragGhostSel());
   if (!under || under === _cardDragEl || under === _cardPlaceholder) return;
 
   const r = under.getBoundingClientRect();
-  const insertAfter = x > r.left + r.width / 2;
+  // Grade: cards lado a lado, decide pela metade esquerda/direita. Lista:
+  // uma coluna só, empilhada — decide pela metade de cima/baixo (mesma ideia,
+  // eixo diferente porque o layout é diferente).
+  const insertAfter = viewMode==='grid' ? (x > r.left + r.width/2) : (y > r.top + r.height/2);
   // A chave inclui o lado (antes/depois), não só o card — senão, depois de
   // mover o placeholder pra depois de um card, voltar o dedo pra cima do
-  // mesmo card (agora do lado esquerdo dele) não recalculava nada, porque
-  // "under" não tinha mudado. Isso travava o arraste bem nas pontas: dava
-  // pra mover pra direita mas não pra voltar pra esquerda sobre o mesmo card.
+  // mesmo card (agora do lado esquerdo/acima dele) não recalculava nada,
+  // porque "under" não tinha mudado. Isso travava o arraste bem nas pontas:
+  // dava pra mover numa direção mas não pra voltar sobre o mesmo card.
   const key = under.dataset.cardId + ':' + (insertAfter ? 'a' : 'b');
   if (key === _cardLastUnder) return;
   _cardLastUnder = key;
 
   const rects = new Map();
-  grid.querySelectorAll('.c-thumb, .c-thumb-ghost').forEach(el => {
+  grid.querySelectorAll(cardDragGhostSel()).forEach(el => {
     if (el !== _cardDragEl) rects.set(el, el.getBoundingClientRect());
   });
 
@@ -214,7 +228,7 @@ function finishCardDrag(pointerId) {
   }
   if (!_cardDragEl) return false;
   if (pointerId !== undefined && _cardDragPointerId !== pointerId) return false;
-  const grid = $('card-grid');
+  const grid = cardDragContainer();
   const deck = activeDeck();
   const draggedId = _cardDragId;
 

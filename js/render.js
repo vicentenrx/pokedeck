@@ -154,6 +154,7 @@ function renderCards() {
   if (!cards.length) { empty.classList.remove('hidden'); grid.style.display='none'; list.style.display='none'; listHead.style.display='none'; return; }
   empty.classList.add('hidden');
   grid.classList.toggle('edit-mode', curEditMode);
+  list.classList.toggle('edit-mode', curEditMode);
   if (viewMode==='grid') {
     grid.style.display='grid'; list.style.display='none'; listHead.style.display='none';
     cards.forEach(c => grid.appendChild(buildGridCard(c, deck.id)));
@@ -318,6 +319,9 @@ function buildListCard(card, deckId) {
       <button class="r-del" title="Excluir">✕</button>
     </div>`;
   el.addEventListener('click', e => {
+    // Em modo de ordenar, a linha inteira é a área de arrastar — tocar não
+    // deveria marcar/desmarcar como possuída (mesma regra da grade).
+    if (curEditMode) return;
     if (e.target.closest('.rq-btn')||e.target.closest('.r-acts')) return;
     toggleOwned(deckId, card.id); refreshAfterCardMutation(deckId, card.id);
   });
