@@ -45,7 +45,7 @@
 
     <div class="ag-panels">
       <form class="ag-form" id="ag-form-signin" novalidate>
-        <div class="mf"><label>E-mail</label><input class="mi" id="ag-in-email" type="email" placeholder="voce@email.com" autocomplete="email"></div>
+        <div class="mf"><label>E-mail ou usuário</label><input class="mi" id="ag-in-email" type="text" placeholder="voce@email.com ou usuario" autocomplete="username"></div>
         <div class="mf"><label>Senha</label><input class="mi" id="ag-in-password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
         <div class="ag-error hidden" id="ag-in-error"></div>
         <button type="submit" class="ag-submit" id="ag-in-submit">Entrar</button>
@@ -54,6 +54,11 @@
 
       <form class="ag-form hidden" id="ag-form-signup" novalidate>
         <div class="mf"><label>E-mail</label><input class="mi" id="ag-up-email" type="email" placeholder="voce@email.com" autocomplete="email"></div>
+        <div class="mf">
+          <label>Nome de usuário</label>
+          <input class="mi" id="ag-up-username" type="text" placeholder="seu_usuario" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false">
+          <div class="ag-hint" id="ag-up-username-hint"></div>
+        </div>
         <div class="mf"><label>Senha</label><input class="mi" id="ag-up-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
         <div class="mf"><label>Confirmar Senha</label><input class="mi" id="ag-up-password2" type="password" placeholder="Repita a senha" autocomplete="new-password"></div>
         <div class="ag-error hidden" id="ag-up-error"></div>

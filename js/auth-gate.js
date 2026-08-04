@@ -5,6 +5,7 @@ function showAuthGate() {
   switchAgTab('signin');
   $('ag-in-email').value = ''; $('ag-in-password').value = '';
   $('ag-up-email').value = ''; $('ag-up-password').value = ''; $('ag-up-password2').value = '';
+  $('ag-up-username').value = ''; setUsernameHint('', '');
   $('auth-gate').classList.remove('hidden');
 }
 function hideAuthGate() {
@@ -55,13 +56,44 @@ function setAgError(id, message) {
 
 function friendlyAuthError(msg) {
   if (/rate limit/i.test(msg))                                  return 'Muitos e-mails enviados recentemente. Aguarde alguns minutos e tente de novo.';
-  if (/invalid login credentials/i.test(msg))                   return 'E-mail ou senha incorretos.';
+  if (/invalid login credentials/i.test(msg))                   return 'E-mail/usuário ou senha incorretos.';
   if (/email not confirmed/i.test(msg))                         return 'Confirme seu e-mail antes de entrar — veja sua caixa de entrada.';
   if (/already registered|already been registered/i.test(msg))  return 'Esse e-mail já tem uma conta. Tente entrar.';
+  if (/profiles_username_key|profiles.*username.*unique|duplicate key.*username/i.test(msg)) return 'Esse nome de usuário já está em uso — escolha outro.';
+  if (/profiles_username_format/i.test(msg))                    return 'Nome de usuário inválido — use só letras minúsculas, números e _, de 3 a 20 caracteres.';
   if (/password.*(least|characters)/i.test(msg))                return 'A senha precisa ter pelo menos 6 caracteres.';
   if (/error sending confirmation email/i.test(msg))            return 'Não conseguimos enviar o e-mail de confirmação agora (problema no servidor de e-mail). Tente de novo em alguns minutos.';
   return msg || 'Algo deu errado. Tente novamente.';
 }
+
+// ── Nome de usuário no cadastro ──
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+let _lastCheckedUsername = null, _lastCheckedAvailable = null;
+
+function setUsernameHint(text, cls) {
+  const el = $('ag-up-username-hint');
+  el.textContent = text;
+  el.className = 'ag-hint' + (cls ? ' ' + cls : '');
+}
+
+$('ag-up-username').addEventListener('input', e => {
+  const start = e.target.selectionStart, end = e.target.selectionEnd;
+  e.target.value = e.target.value.toLowerCase(); // login/checagem são case-insensitive — evita confusão mostrando sempre minúsculo
+  e.target.setSelectionRange(start, end);
+  const username = e.target.value;
+  clearTimeout(usernameCheckTmr);
+  if (!username) { setUsernameHint('', ''); return; }
+  if (!USERNAME_RE.test(username)) { setUsernameHint('3-20 caracteres: letras minúsculas, números e _', 'bad'); return; }
+  setUsernameHint('Verificando...', '');
+  usernameCheckTmr = setTimeout(async () => {
+    const available = await checkUsernameAvailable(username);
+    if ($('ag-up-username').value !== username) return; // já mudou de novo enquanto isso corria
+    _lastCheckedUsername = username; _lastCheckedAvailable = available;
+    if (available === null) setUsernameHint('Não conseguimos verificar agora — pode tentar criar mesmo assim.', '');
+    else if (available)     setUsernameHint('✓ Disponível', 'ok');
+    else                    setUsernameHint('Já em uso — escolha outro.', 'bad');
+  }, 350);
+});
 
 $('ag-tab-signin').addEventListener('click', () => switchAgTab('signin'));
 $('ag-tab-signup').addEventListener('click', () => switchAgTab('signup'));
@@ -69,13 +101,13 @@ $('ag-back-to-login').addEventListener('click', () => switchAgTab('signin'));
 
 $('ag-form-signin').addEventListener('submit', async e => {
   e.preventDefault();
-  const email    = $('ag-in-email').value.trim();
-  const password = $('ag-in-password').value;
-  if (!email || !password) { setAgError('ag-in-error', 'Preencha e-mail e senha.'); return; }
+  const identifier = $('ag-in-email').value.trim();
+  const password    = $('ag-in-password').value;
+  if (!identifier || !password) { setAgError('ag-in-error', 'Preencha e-mail/usuário e senha.'); return; }
   const btn = $('ag-in-submit');
   btn.disabled = true; btn.textContent = 'Entrando...';
   try {
-    await signIn(email, password);
+    await signInWithIdentifier(identifier, password);
     const entered = await loadSbAndEnter();
     // Se não entrou (loadSbAndEnter mostrou a tela de "tentar de novo"
     // porque não deu pra confirmar se a conta tem deck salvo), não avisa
@@ -99,15 +131,22 @@ $('ag-form-signin').addEventListener('submit', async e => {
 $('ag-form-signup').addEventListener('submit', async e => {
   e.preventDefault();
   const email     = $('ag-up-email').value.trim();
+  const username  = $('ag-up-username').value.trim();
   const password  = $('ag-up-password').value;
   const password2 = $('ag-up-password2').value;
-  if (!email || !password)    { setAgError('ag-up-error', 'Preencha e-mail e senha.'); return; }
-  if (password.length < 6)    { setAgError('ag-up-error', 'A senha precisa ter pelo menos 6 caracteres.'); return; }
-  if (password !== password2) { setAgError('ag-up-error', 'As senhas não coincidem.'); return; }
+  if (!email || !username || !password) { setAgError('ag-up-error', 'Preencha e-mail, usuário e senha.'); return; }
+  if (!USERNAME_RE.test(username))       { setAgError('ag-up-error', 'Nome de usuário inválido — use só letras minúsculas, números e _, de 3 a 20 caracteres.'); return; }
+  if (password.length < 6)               { setAgError('ag-up-error', 'A senha precisa ter pelo menos 6 caracteres.'); return; }
+  if (password !== password2)            { setAgError('ag-up-error', 'As senhas não coincidem.'); return; }
+  // Checagem em tempo real já rodou pra esse valor exato e disse indisponível — evita
+  // até tentar (o backend também bloqueia, isso só poupa uma viagem de rede previsível).
+  if (_lastCheckedUsername === username && _lastCheckedAvailable === false) {
+    setAgError('ag-up-error', 'Esse nome de usuário já está em uso — escolha outro.'); return;
+  }
   const btn = $('ag-up-submit');
   btn.disabled = true; btn.textContent = 'Criando...';
   try {
-    const r = await signUp(email, password);
+    const r = await signUp(email, password, username);
     if (r.needsConfirmation) {
       $('ag-verify-email').textContent = email;
       showAgView('ag-verify');
@@ -174,7 +213,7 @@ function initAuthRedirect() {
   }
 
   // type === 'signup': não loga sozinho construindo uma sessão à mão (isso
-  // duplicaria o caminho de signIn() sem necessidade) — só pré-preenche o
+  // duplicaria o caminho de login sem necessidade) — só pré-preenche o
   // e-mail (via esse mesmo token, que já revalida no servidor) e marca que
   // o próximo "Entrar" bem-sucedido é o primeiro de verdade dessa conta.
   fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON_KEY, Authorization: `Bearer ${result.access_token}` } })
@@ -187,7 +226,10 @@ function initAuthRedirect() {
 }
 
 $('ag-forgot-link').addEventListener('click', () => {
-  $('ag-fg-email').value = $('ag-in-email').value.trim();
+  const loginField = $('ag-in-email').value.trim();
+  // Só pré-preenche se for mesmo um e-mail — o campo de login agora aceita
+  // username também, e recuperação de senha precisa do e-mail de verdade.
+  $('ag-fg-email').value = loginField.includes('@') ? loginField : '';
   showAgView('ag-form-forgot');
   setTimeout(() => $('ag-fg-email').focus(), 60);
 });

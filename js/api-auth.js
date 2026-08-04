@@ -21,20 +21,47 @@ function sessionFromAuthResponse(data) {
   };
 }
 
-async function signUp(email, password) {
+async function signUp(email, password, username) {
   // Sem isso, o Supabase usa a "Site URL" configurada no painel como destino
   // do link de confirmação — se estiver desatualizada (ex: localhost), o link
   // do e-mail leva pra um endereço morto. Aponta sempre pro endereço atual.
   const redirectTo = encodeURIComponent(location.origin + location.pathname);
-  const data = await authRequest(`/signup?redirect_to=${redirectTo}`, { email, password });
+  // `data` vira raw_user_meta_data em auth.users — um trigger no banco (ver
+  // supabase/migrations) lê username de lá pra criar a linha em `profiles`
+  // sozinho, sem precisar de um segundo request daqui.
+  const data = await authRequest(`/signup?redirect_to=${redirectTo}`, { email, password, data: { username } });
   if (!data.access_token) return { needsConfirmation: true };
   saveSession(sessionFromAuthResponse(data));
   return { needsConfirmation: false };
 }
 
-async function signIn(email, password) {
-  const data = await authRequest('/token?grant_type=password', { email, password });
+// Login por e-mail OU username. A resolução de username pra e-mail acontece
+// só dentro da Edge Function (com a service_role, que nunca chega aqui) —
+// esta função nunca vê nem manuseia o e-mail real por trás de um username,
+// só recebe de volta a sessão pronta (ou um erro genérico, igual a uma senha
+// errada) exatamente como um login direto por e-mail sempre devolveu.
+async function signInWithIdentifier(identifier, password) {
+  const res = await fetch(`${SB_URL}/functions/v1/login-with-identifier`, {
+    method: 'POST',
+    headers: { apikey: SB_ANON_KEY, Authorization: `Bearer ${SB_ANON_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error_description || data.msg || 'Não foi possível autenticar.');
   saveSession(sessionFromAuthResponse(data));
+}
+
+// Checagem em tempo real no cadastro — devolve só true/false, nunca uma
+// linha/e-mail (ver username_available() na migração). Falha de rede conta
+// como "não sei", não como "indisponível" — quem chama decide o que mostrar.
+async function checkUsernameAvailable(username) {
+  const res = await fetch(`${SB_URL}/rest/v1/rpc/username_available`, {
+    method: 'POST',
+    headers: { apikey: SB_ANON_KEY, Authorization: `Bearer ${SB_ANON_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_username: username }),
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
 
 async function signOut() {

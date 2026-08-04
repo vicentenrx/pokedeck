@@ -30,6 +30,10 @@
   border-radius:8px;padding:9px 12px;margin:-4px 0 14px;line-height:1.5}
 .ag-error.hidden{display:none}
 
+.ag-hint{font-size:11px;margin-top:6px;min-height:14px;color:var(--g400)}
+.ag-hint.ok{color:#6EE7B7}
+.ag-hint.bad{color:#FCA5A5}
+
 .ag-form.ag-shake{animation:agShake .38s}
 @keyframes agShake{
   10%,90%{transform:translateX(-1px)} 20%,80%{transform:translateX(2px)}

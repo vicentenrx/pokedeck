@@ -18,6 +18,7 @@ let pendingCardMeta = null; // metadados (preço/raridade/número) da sugestão 
 let curEditMode = false; // "modo de ordenar": ativa o arraste livre das cartas na grade (ver dragdrop.js)
 let editSearchTmr = null;
 let pendingEditCardMeta = null; // metadados da sugestão clicada no modal Editar Carta
+let usernameCheckTmr = null; // debounce da checagem de disponibilidade no cadastro
 
 // Token de geração por carta: evita que uma busca de metadado em segundo
 // plano (disparada depois de salvar Adicionar/Editar Carta ou durante um

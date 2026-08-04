@@ -51,6 +51,24 @@ build step — servir a pasta (ou abrir `index.html`) já roda o app inteiro.
 - Confirmação de e-mail fica ativada de propósito (é pra comunidade, não uso
   pessoal). SMTP customizado via Brevo pra fugir do limite baixo do envio
   padrão do Supabase — confirmar status atual antes de assumir que funciona.
+- **Login por username** (desde 2026-08-04): tabela `profiles` (`user_id`,
+  `username` único, `email` — preenchida sozinha por um trigger
+  `on_auth_user_created` que lê `raw_user_meta_data->>'username'` no
+  cadastro; RLS só permite cada um ler/editar a própria linha). A resolução
+  username→e-mail pro login NUNCA acontece via tabela pública (isso vazaria
+  e-mail) — só dentro da Edge Function `login-with-identifier`
+  (`supabase/functions/`), que usa a `service_role` (injetada automaticamente
+  pelo runtime da função, nunca vista/manuseada por humano ou Claude) pra
+  resolver o username e devolver só a sessão pronta, nunca o e-mail. Checagem
+  de disponibilidade em tempo real usa a RPC `username_available()` (só
+  devolve booleano). Ver `supabase/migrations/` pro schema completo.
+- **CLI da Supabase**: `supabase/` na raiz do repo (`config.toml` +
+  `migrations/` + `functions/`) é versionado normalmente; o CLI já vem
+  autenticado neste ambiente (`supabase projects list` funciona sem login).
+  Projeto linkado ao de produção (`izaeernhfzmrulztouvd`). `supabase db push
+  --linked --yes` aplica migrações; `supabase functions deploy <nome>
+  --project-ref izaeernhfzmrulztouvd` publica uma função (não aceita
+  `--linked`, precisa do ref explícito).
 - **Pokémon TCG API**: chave grátis em `constants.js`. Já retorna preço real
   (TCGPlayer USD + Cardmarket EUR) em cada carta — é isso que alimenta o
   painel de informações, sem precisar de nenhuma API de preço adicional.
@@ -187,9 +205,10 @@ de ponta a ponta, com e-mail de verdade:**
   trocar URL/chave). **Análise de impacto já feita**: `save()` em `state.js`
   chama `syncSb()` sem `await` (fire-and-forget) — ou seja, a região do
   Supabase **não afeta** a sensação de resposta ao tocar numa carta/deck, só
-  afeta o que é de fato esperado (`await`): login (`signIn`) e carregamento
-  inicial (`loadSb` em `enterApp`/`init`). Vale a pena, mas o ganho real é
-  só nesses dois momentos, não no uso do dia a dia. Discutido, não executado.
+  afeta o que é de fato esperado (`await`): login (`signInWithIdentifier`) e
+  carregamento inicial (`loadSb` em `enterApp`/`init`). Vale a pena, mas o
+  ganho real é só nesses dois momentos, não no uso do dia a dia. Discutido,
+  não executado.
 - Roteiro pra virar app mobile (PWA → polimento de UI → Capacitor): etapa
   PWA concluída (`manifest.json`, ícones, meta tags, CSS "cara de app" —
   sem service worker, de propósito, pra não conflitar com os headers
