@@ -192,6 +192,25 @@ function updateCardInPlace(deckId, cardId) {
   else                   updateListCardVisual(el, card);
 }
 
+// Troca só o elemento de UMA carta pelo resultado fresco do mesmo builder
+// usado no render normal (buildGridCard/buildListCard) — cobre imagem,
+// raridade, número, tipo (pílula colorida na lista), tudo que
+// updateCardInPlace/updateGridCardVisual/updateListCardVisual não tocam
+// (esses só atualizam posse/quantidade). Usado depois de uma busca de
+// metadado em segundo plano (card-info.js) pra refletir na grade/lista sem
+// reconstruir tudo (renderCards() zera e reconstrói #card-grid/#card-list
+// inteiros a cada chamada).
+function updateCardMediaInPlace(deckId, cardId) {
+  const deck = state.decks.find(d => d.id===deckId);
+  const card = deck?.cards.find(c => c.id===cardId);
+  if (!deck || !card || !cardPassesFilter(card)) { renderCards(); return; }
+  const container = viewMode==='grid' ? $('card-grid') : $('card-list');
+  const el = [...container.children].find(x => x.dataset.cardId===cardId);
+  if (!el) { renderCards(); return; } // não deveria acontecer, mas por segurança cai pro caminho completo
+  const fresh = viewMode==='grid' ? buildGridCard(card, deckId) : buildListCard(card, deckId);
+  el.replaceWith(fresh);
+}
+
 function updateGridCardVisual(el, card) {
   const isOwned   = card.owned >= card.qty;
   const isPartial = card.owned > 0 && card.owned < card.qty;
@@ -283,7 +302,12 @@ function buildGridCard(card, deckId) {
     e.stopPropagation(); adjustOwned(deckId, card.id, parseInt(b.dataset.d)); refreshAfterCardMutation(deckId, card.id);
   }));
   el.querySelector('.c-del-btn').addEventListener('click', e => {
-    e.stopPropagation(); deleteCard(deckId, card.id); renderAll();
+    e.stopPropagation();
+    // Confirmação como a de excluir deck (render.js:58) -- esse botão fica
+    // colado ao lado do de editar/info no mobile, então um toque um pouco
+    // errado não deveria apagar a carta direto, sem chance de desfazer.
+    if (!confirm(`Excluir "${card.name}"?`)) return;
+    deleteCard(deckId, card.id); renderAll();
   });
   el.querySelector('.c-edit-btn').addEventListener('click', e => {
     e.stopPropagation(); openEditCard(deckId, card.id);
@@ -329,7 +353,9 @@ function buildListCard(card, deckId) {
     e.stopPropagation(); adjustOwned(deckId, card.id, parseInt(b.dataset.d)); refreshAfterCardMutation(deckId, card.id);
   }));
   el.querySelector('.r-del').addEventListener('click', e => {
-    e.stopPropagation(); deleteCard(deckId, card.id); renderAll();
+    e.stopPropagation();
+    if (!confirm(`Excluir "${card.name}"?`)) return; // mesma confirmação do botão equivalente na grade
+    deleteCard(deckId, card.id); renderAll();
   });
   el.querySelector('.r-edit').addEventListener('click', e => {
     e.stopPropagation(); openEditCard(deckId, card.id);

@@ -12,5 +12,7 @@ $('sb-logout-btn').addEventListener('click', async () => {
 
 // ESC
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') ['m-deck','m-card','m-import','m-export','m-info'].forEach(closeModal);
+  if (e.key!=='Escape') return;
+  ['m-deck','m-card','m-import','m-export'].forEach(closeModal);
+  closeCardInfo(); // m-info tem limpeza própria (infoDeckId/infoCardId) -- ver card-info.js
 });

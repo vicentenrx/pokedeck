@@ -15,6 +15,16 @@ const CORS_HEADERS = {
 
 const GENERIC_ERROR = { error_description: 'Invalid login credentials' }
 
+// Piso de tempo mínimo pra QUALQUER resposta de erro deste endpoint. Sem
+// isso, "username não existe" volta rápido (só uma consulta indexada) e
+// "username existe, senha errada" volta bem mais devagar (round-trip até o
+// GoTrue, que faz uma comparação de senha propositalmente cara/bcrypt) --
+// mesmo com corpo/status idênticos, um atacante consegue distinguir os dois
+// casos só pela latência e enumerar usernames válidos sem nem passar pelo
+// rate-limit de login do GoTrue (que só existe no caminho lento). Padroniza
+// as duas respostas de erro pro mesmo piso, absorvendo essa diferença.
+const MIN_RESPONSE_MS = 600
+
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
@@ -22,17 +32,31 @@ function json(body: unknown, status: number) {
   })
 }
 
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
+
+  const startedAt = Date.now()
+  // Devolve um erro genérico, mas só depois de garantir que passou o piso de
+  // tempo mínimo desde o início da requisição -- usado em todo caminho de
+  // falha abaixo, pra nenhum deles ficar rápido demais em relação ao outro.
+  async function genericError() {
+    const elapsed = Date.now() - startedAt
+    if (elapsed < MIN_RESPONSE_MS) await sleep(MIN_RESPONSE_MS - elapsed)
+    return json(GENERIC_ERROR, 400)
+  }
 
   let identifier: unknown, password: unknown
   try {
     ;({ identifier, password } = await req.json())
   } catch {
-    return json(GENERIC_ERROR, 400)
+    return genericError()
   }
   if (typeof identifier !== 'string' || typeof password !== 'string' || !identifier || !password) {
-    return json(GENERIC_ERROR, 400)
+    return genericError()
   }
 
   const SB_URL = Deno.env.get('SUPABASE_URL')!
@@ -48,7 +72,7 @@ Deno.serve(async (req) => {
       .select('email')
       .eq('username', email.toLowerCase())
       .maybeSingle()
-    if (!data) return json(GENERIC_ERROR, 400) // mesma resposta de senha errada -- não confirma nem nega que o username existe
+    if (!data) return genericError() // mesma resposta de senha errada -- não confirma nem nega que o username existe (e o piso de tempo acima cobre a diferença de latência)
     email = data.email
   }
 
@@ -60,6 +84,6 @@ Deno.serve(async (req) => {
     body: JSON.stringify({ email, password }),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) return json(GENERIC_ERROR, 400)
+  if (!res.ok) return genericError()
   return json(data, 200)
 })

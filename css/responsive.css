@@ -27,12 +27,18 @@
      colunas de coleção/tipo, que já ficam escondidas aqui) -- o problema do
      nome empurrando +/- pra longe (corrigido com fit-content em cards.css)
      não se repete numa tela de ~350px, então o nome continua 1fr (flexível,
-     encolhe/trunca normalmente). qtd e ações usam auto (tamanho real dos
-     botões) em vez de um valor fixo. Botões um pouco menores que os da
-     grade (linha 22-24) e gap mais apertado entre colunas -- na grade cada
-     botão é o único elemento flutuando sobre a carta, mas aqui divide a
-     linha com o nome, e nome ilegível (truncado demais) também atrapalha. */
-  .c-row,.c-row-head{grid-template-columns:26px 20px 1fr auto auto;gap:6px}
+     encolhe/trunca normalmente). Botões um pouco menores que os da grade
+     (linha 22-24) e gap mais apertado entre colunas -- na grade cada botão é
+     o único elemento flutuando sobre a carta, mas aqui divide a linha com o
+     nome, e nome ilegível (truncado demais) também atrapalha.
+     qtd/ações usam px fixo (não auto): `.c-row-head` e cada `.c-row` são
+     grids INDEPENDENTES (não subgrid), então `auto` seria calculado a partir
+     do próprio conteúdo de cada um -- o cabeçalho ("Progresso" + um span
+     vazio) é bem mais estreito que os controles reais de cada linha, o que
+     deslocava os rótulos do cabeçalho pra longe das colunas de verdade
+     embaixo. Fixo (do mesmo jeito que o desktop já faz em cards.css) garante
+     que os dois fiquem do mesmo tamanho em qualquer um dos dois grids. */
+  .c-row,.c-row-head{grid-template-columns:26px 20px 1fr 92px 100px;gap:6px}
   .c-row .r-set, .c-row-head .lh-set,
   .c-row .type-pill, .c-row-head .lh-type{display:none}
   .rq-btn{width:26px;height:26px;font-size:15px}
@@ -96,4 +102,14 @@
 }
 @media(max-width:420px){
   #card-grid{grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:8px}
+
+  /* Nesta faixa mais estreita, os 34px de .c-icon-btn (definidos lá em cima
+     pro breakpoint de 720px) não sobram mais folga nenhuma ao lado do botão
+     de excluir -- em larguras reais comuns (ex: 412px, a maioria dos
+     Android) a distância entre o grupo editar/info e o botão de excluir
+     chegava a ~0-2px, quase se tocando. Reduz só aqui (ainda maior que os
+     27px originais antes desta sessão) e aperta um pouco o espaçamento
+     entre os dois botões da esquerda, restaurando uma folga confortável. */
+  .c-icon-btn{width:30px;height:30px;font-size:15px}
+  .c-btn-group-left{gap:4px}
 }

@@ -110,7 +110,16 @@ $('btn-retry-images').addEventListener('click', async () => {
       if (!c) continue;
       let meta = metas[i];
       let changed = false;
-      if (meta.img) { applyCardMeta(c, meta); changed = true; }
+      // hadImg guarda se a carta JÁ tinha imagem antes deste lote -- sem
+      // isso, uma carta que só tem preço faltando (já tem imagem) reaplica a
+      // MESMA imagem que já tinha (fetchCardMeta acha ela de novo no banco
+      // local) e isso sozinho marcava "changed", gravando priceUpdatedAt e
+      // contando a carta como "atualizada" mesmo quando o preço -- o dado que
+      // de fato faltava -- nunca foi encontrado. Isso desliga o auto-retry do
+      // painel de informações pra essa carta (gatilho é `!priceUpdatedAt`)
+      // como se o preço já tivesse sido resolvido, quando não foi.
+      const hadImg = !!c.img;
+      if (meta.img) { applyCardMeta(c, meta); if (!hadImg) changed = true; }
       if (c.priceUsd == null && c.priceEur == null) {
         const remoteMeta = await fetchRemoteCardMeta(card.name, card.set);
         if ((cardMetaGen.get(card.id) || 0) !== gens[i]) continue; // idem, checado de novo -- essa segunda busca também é assíncrona

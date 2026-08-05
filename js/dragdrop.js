@@ -92,16 +92,24 @@ const CARD_HOLD_MS = 280, CARD_MOVE_CANCEL_PX = 10, CARD_ARM_PX = 6;
 let _cardDown = null;                       // {el,id,pointerId,x,y,pointerType,timer} — antes de armar
 let _cardDragEl = null, _cardDragId = null, _cardDragPointerId = null; // depois de armar
 let _cardOffsetX = 0, _cardOffsetY = 0, _cardPlaceholder = null, _cardLastUnder = null;
+// Modo de visualização travado no instante em que o arraste arma (armCardDrag
+// preenche, finishCardDrag limpa). Um ponteiro só não muda viewMode no meio
+// do próprio arraste (não dá pra clicar no toggle grade/lista com o ponteiro
+// capturado) -- mas um SEGUNDO dedo, num toque simultâneo no toggle, muda
+// viewMode antes de renderCards()->finishCardDrag() rodar. Sem travar o modo
+// aqui, finishCardDrag ia procurar o card arrastado no contêiner do modo
+// NOVO (vazio, ainda não populado), descartando o arraste em silêncio.
+let _cardDragViewMode = null;
+function effectiveCardViewMode() { return _cardDragViewMode || viewMode; }
 
 // Grade e lista compartilham o mesmo "modo de ordenar" -- as duas funções
-// abaixo dizem, pro modo de visualização ATUAL, qual é o contêiner e qual é
-// o seletor do item arrastável. viewMode não muda no meio de um arraste (não
-// tem como clicar no toggle grade/lista com o ponteiro capturado), então dá
-// pra ler direto em qualquer ponto do gesto sem guardar isso à parte.
-function cardDragContainer() { return $(viewMode==='grid' ? 'card-grid' : 'card-list'); }
-function cardDragItemSel()   { return viewMode==='grid' ? '.c-thumb' : '.c-row'; }
-function cardDragGhostSel()  { return viewMode==='grid' ? '.c-thumb, .c-thumb-ghost' : '.c-row, .c-row-ghost'; }
-function cardDragGhostClass(){ return viewMode==='grid' ? 'c-thumb-ghost' : 'c-row-ghost'; }
+// abaixo dizem, pro modo de visualização EFETIVO (travado durante um
+// arraste em andamento, ao vivo fora dele), qual é o contêiner e qual é o
+// seletor do item arrastável.
+function cardDragContainer() { return $(effectiveCardViewMode()==='grid' ? 'card-grid' : 'card-list'); }
+function cardDragItemSel()   { return effectiveCardViewMode()==='grid' ? '.c-thumb' : '.c-row'; }
+function cardDragGhostSel()  { return effectiveCardViewMode()==='grid' ? '.c-thumb, .c-thumb-ghost' : '.c-row, .c-row-ghost'; }
+function cardDragGhostClass(){ return effectiveCardViewMode()==='grid' ? 'c-thumb-ghost' : 'c-row-ghost'; }
 
 function initCardDragDrop() {
   if (!curEditMode) return;
@@ -127,6 +135,7 @@ function armCardDrag(down, x, y) {
   _cardDragEl = el;
   _cardDragId = down.id;
   _cardDragPointerId = down.pointerId;
+  _cardDragViewMode = viewMode; // trava o modo pro resto deste arraste (ver comentário acima)
   _cardOffsetX = x - rect.left;
   _cardOffsetY = y - rect.top;
   _cardLastUnder = null;
@@ -177,7 +186,7 @@ function updateCardFlipTarget(x, y) {
   // Grade: cards lado a lado, decide pela metade esquerda/direita. Lista:
   // uma coluna só, empilhada — decide pela metade de cima/baixo (mesma ideia,
   // eixo diferente porque o layout é diferente).
-  const insertAfter = viewMode==='grid' ? (x > r.left + r.width/2) : (y > r.top + r.height/2);
+  const insertAfter = effectiveCardViewMode()==='grid' ? (x > r.left + r.width/2) : (y > r.top + r.height/2);
   // A chave inclui o lado (antes/depois), não só o card — senão, depois de
   // mover o placeholder pra depois de um card, voltar o dedo pra cima do
   // mesmo card (agora do lado esquerdo/acima dele) não recalculava nada,
@@ -255,6 +264,7 @@ function finishCardDrag(pointerId) {
   _cardDragEl.classList.remove('dragging');
 
   _cardDragEl = null; _cardDragId = null; _cardDragPointerId = null; _cardPlaceholder = null; _cardLastUnder = null;
+  _cardDragViewMode = null; // destrava -- próxima leitura de effectiveCardViewMode() volta a seguir o viewMode ao vivo
   return true;
 }
 function endCardDrag(e) {
