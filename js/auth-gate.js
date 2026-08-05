@@ -80,14 +80,21 @@ $('ag-up-username').addEventListener('input', e => {
   const start = e.target.selectionStart, end = e.target.selectionEnd;
   e.target.value = e.target.value.toLowerCase(); // login/checagem são case-insensitive — evita confusão mostrando sempre minúsculo
   e.target.setSelectionRange(start, end);
-  const username = e.target.value;
+  // .trim() aqui pra bater com o que o submit já faz (value.trim() lá embaixo)
+  // — sem isso, colar um username com espaço nas pontas mostrava "formato
+  // inválido" na checagem ao vivo mesmo quando o envio final (já trimado)
+  // teria funcionado normalmente.
+  const username = e.target.value.trim();
   clearTimeout(usernameCheckTmr);
   if (!username) { setUsernameHint('', ''); return; }
   if (!USERNAME_RE.test(username)) { setUsernameHint('3-20 caracteres: letras minúsculas, números e _', 'bad'); return; }
   setUsernameHint('Verificando...', '');
   usernameCheckTmr = setTimeout(async () => {
     const available = await checkUsernameAvailable(username);
-    if ($('ag-up-username').value !== username) return; // já mudou de novo enquanto isso corria
+    // .trim() aqui também -- "username" já é o valor trimado (linha acima),
+    // então comparar contra o campo bruto (que pode ter espaço nas pontas)
+    // nunca bateria e travava a checagem em "Verificando..." pra sempre.
+    if ($('ag-up-username').value.trim() !== username) return; // já mudou de novo enquanto isso corria
     _lastCheckedUsername = username; _lastCheckedAvailable = available;
     if (available === null) setUsernameHint('Não conseguimos verificar agora — pode tentar criar mesmo assim.', '');
     else if (available)     setUsernameHint('✓ Disponível', 'ok');
