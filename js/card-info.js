@@ -89,6 +89,12 @@ async function fetchAndApplyMeta(card) {
   infoFetchDone = true;
   save();
   renderCardInfo(c);
+  // Sem isso, corrigir o preço aqui (clicando em "tentar de novo") só
+  // refletia no painel em si — o valor total no topo (renderDeckValue,
+  // dentro de renderTopbar) e a carta na grade/lista ficavam desatualizados
+  // até a página ser recarregada. renderAll() não mexe no modal aberto (só
+  // sidebar/topbar/grade), então é seguro chamar com o painel ainda visível.
+  renderAll();
 }
 
 $('m-info-close').addEventListener('click', () => closeModal('m-info'));
